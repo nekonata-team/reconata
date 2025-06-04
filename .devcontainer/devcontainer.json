@@ -1,0 +1,20 @@
+{
+    "name": "Discord Recording Bot DevContainer",
+    "dockerComposeFile": [
+        "../docker-compose.yml"
+    ],
+    "service": "discord-bot",
+    "workspaceFolder": "/app",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "terminal.integrated.shell.linux": "/bin/bash"
+            },
+            "extensions": [
+                "ms-python.python",
+                "ms-azuretools.vscode-docker"
+            ]
+        }
+    },
+    "postCreateCommand": "pip install -r requirements.txt || true"
+}

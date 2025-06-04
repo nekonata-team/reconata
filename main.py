@@ -36,7 +36,7 @@ class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
 
     prompt_provider = providers.Singleton(FormattedMarkdownSummarizePromptProvider)
-    transcriber = providers.Singleton(FasterWhisperTranscriber)
+    transcriber = providers.Singleton(FasterWhisperTranscriber, model_size="turbo")
     summarizer = providers.Singleton(
         GeminiSummarizer,
         api_key=config.api_key,

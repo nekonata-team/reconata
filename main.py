@@ -133,6 +133,30 @@ async def test(ctx: discord.ApplicationContext):
     await ctx.respond("テストメッセージを送信しました。")
 
 
+@bot.command()
+async def parameters(ctx: discord.ApplicationContext):
+    embed = discord.Embed(title="Current Parameters")
+    embed.add_field(name="Model Size", value=container.config.model_size())
+    embed.add_field(name="Beam Size", value=str(container.config.beam_size()))
+    # PATをマスクして表示
+    repo_url = container.config.repo_url()
+    if repo_url and repo_url.startswith("https://") and "@github.com/" in repo_url:
+        import re
+
+        # https://<PAT>@github.com/owner/repo.git → https://***@github.com/owner/repo.git
+        repo_url = re.sub(r"(https://)[^@]+(@github.com/)", r"\1***\2", repo_url)
+    embed.add_field(name="GitHub Repo URL", value=repo_url)
+
+    summarizer_class = type(container.summarizer()).__name__
+    transcriber_class = type(container.transcriber()).__name__
+    post_process_class = type(container.post_process()).__name__
+    embed.add_field(name="Summarizer", value=summarizer_class)
+    embed.add_field(name="Transcriber", value=transcriber_class)
+    embed.add_field(name="PostProcess", value=post_process_class)
+
+    await ctx.respond(embed=embed)
+
+
 async def on_finish_recording(sink: FileSink, channel: discord.TextChannel):
     await sink.vc.disconnect()
 

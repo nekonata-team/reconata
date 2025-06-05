@@ -71,7 +71,9 @@ audio_handler = container.audio_handler()
 meetings: dict[int, Meeting] = {}
 
 
-@bot.command()
+@bot.command(
+    description="録音を開始します。ボイスチャンネルに参加してから実行してください。"
+)
 async def start(ctx: discord.ApplicationContext):
     member = cast(discord.Member, ctx.author)
     voice = member.voice
@@ -95,7 +97,7 @@ async def start(ctx: discord.ApplicationContext):
         await ctx.respond("録音を開始しました。")
 
 
-@bot.command()
+@bot.command(description="録音を停止します。録音中のみ有効です。")
 async def stop(ctx: discord.ApplicationContext):
     meeting = meetings.get(ctx.guild.id)
     if meeting is not None:
@@ -105,7 +107,7 @@ async def stop(ctx: discord.ApplicationContext):
         await ctx.respond("録音は開始されていません。")
 
 
-@bot.command()
+@bot.command(description="テストメッセージとテストファイルを送信します。")
 async def test(ctx: discord.ApplicationContext):
     channel = cast(discord.TextChannel, ctx.channel)
 
@@ -133,7 +135,7 @@ async def test(ctx: discord.ApplicationContext):
     await ctx.respond("テストメッセージを送信しました。")
 
 
-@bot.command()
+@bot.command(description="現在のパラメータや利用中のコンポーネント情報を表示します。")
 async def parameters(ctx: discord.ApplicationContext):
     embed = discord.Embed(title="Current Parameters")
     embed.add_field(name="Model Size", value=container.config.model_size())

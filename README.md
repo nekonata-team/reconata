@@ -4,30 +4,14 @@
 
 ### CPU版
 
-初回起動
-
 ```bash
-docker compose up --build
-```
-
-二回目以降
-
-```bash
-docker compose up
+docker compose up bot --build
 ```
 
 ### GPU版
 
-初回起動
-
 ```bash
-docker compose -f docker-compose.gpu.yml up --build
-```
-
-二回目以降
-
-```bash
-docker compose -f docker-compose.gpu.yml up
+docker compose -f docker-compose.gpu.yml up bot --build
 ```
 
 ## 環境変数
@@ -36,11 +20,12 @@ docker compose -f docker-compose.gpu.yml up
 
 ## 開発フロー
 
-devcontainerを使用して開発する。
+devcontainerを利用して開発
+
+左下の「><」アイコンをクリックし、「Reopen in Container」を選択
 
 ## 補足
 
-- Python 3.11が必要
+- Python 3.11で開発
   - 一部ライブラリが3.12以降で非推奨になったため
-- GPU版はNVIDIAドライバとDockerのNVIDIAランタイムが必要
 - 環境変数の`GITHUB_REPO_URL`は、プライベートリポジトリの場合、PATを組み込む

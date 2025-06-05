@@ -3,7 +3,10 @@
     "dockerComposeFile": [
         "../docker-compose.yml"
     ],
-    "service": "discord-bot",
+    "runServices": [
+        "dev"
+    ],
+    "service": "dev",
     "workspaceFolder": "/app",
     "customizations": {
         "vscode": {
@@ -17,6 +20,7 @@
                 "usernamehw.errorlens",
                 "mosapride.zenkaku",
                 "shardulm94.trailing-spaces",
+                "sukumo28.wav-preview",
                 "ms-azuretools.vscode-docker"
             ]
         }

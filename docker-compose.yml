@@ -1,5 +1,5 @@
 services:
-  discord-bot:
+  bot:
     build:
       context: .
       args:
@@ -11,3 +11,18 @@ services:
       - .:/app
     working_dir: /app
     command: python main.py
+
+  dev:
+    build:
+      context: .
+      args:
+        GITHUB_PAT: ${GITHUB_PAT}
+    container_name: discord-recording-bot-dev
+    env_file:
+      - .env
+    environment:
+      - MODEL_SIZE=small
+    volumes:
+      - .:/app
+    working_dir: /app
+    tty: true

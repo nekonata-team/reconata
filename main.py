@@ -14,6 +14,7 @@ from summarizer.prompt_provider.formatted_markdown import (
 )
 from transcriber.faster_whisper import FasterWhisperTranscriber
 
+from file_sink import FileSink
 from handler import MinuteAudioHandler
 from types_ import (
     AppendEmbedData,
@@ -36,7 +37,11 @@ class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
 
     prompt_provider = providers.Singleton(FormattedMarkdownSummarizePromptProvider)
-    transcriber = providers.Singleton(FasterWhisperTranscriber, model_size="turbo")
+    transcriber = providers.Singleton(
+        FasterWhisperTranscriber,
+        model_size=config.model_size,
+        beam_size=1,
+    )
     summarizer = providers.Singleton(
         GeminiSummarizer,
         api_key=config.api_key,
@@ -59,6 +64,7 @@ class Container(containers.DeclarativeContainer):
 container = Container()
 container.config.repo_url.from_env("GITHUB_REPO_URL", required=True)
 container.config.api_key.from_env("GOOGLE_API_KEY", required=True)
+container.config.model_size.from_env("MODEL_SIZE", default="small")
 audio_handler = container.audio_handler()
 
 meetings: dict[int, Meeting] = {}
@@ -80,7 +86,7 @@ async def start(ctx: discord.ApplicationContext):
         meetings[ctx.guild.id] = Meeting(voice_client=vc)
 
         vc.start_recording(
-            discord.sinks.MP3Sink(),
+            FileSink(),
             on_finish_recording,
             ctx.channel,
             sync_start=True,
@@ -126,9 +132,7 @@ async def test(ctx: discord.ApplicationContext):
     await ctx.respond("テストメッセージを送信しました。")
 
 
-async def on_finish_recording(
-    sink: discord.sinks.MP3Sink, channel: discord.TextChannel
-):
+async def on_finish_recording(sink: FileSink, channel: discord.TextChannel):
     await sink.vc.disconnect()
 
     if hasattr(audio_handler, "encoding"):
@@ -163,6 +167,7 @@ async def on_finish_recording(
 
     # clean up
     del meetings[channel.guild.id]
+    sink.remove_temp_files()
 
 
 if (token := os.getenv("DISCORD_BOT_TOKEN")) is not None:

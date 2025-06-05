@@ -91,7 +91,6 @@ def _save_audio_files(
     for user_id, data in audio_data.items():
         audio = data.audio
         file_path = AudioFilePathBuilder.user_audio_path(folder_path, user_id, encoding)
-        audio.file.seek(0)
         with open(file_path, "wb") as f:
             f.write(audio.file.read())
         output_paths.append(file_path)

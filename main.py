@@ -40,7 +40,7 @@ class Container(containers.DeclarativeContainer):
     transcriber = providers.Singleton(
         FasterWhisperTranscriber,
         model_size=config.model_size,
-        beam_size=1,
+        beam_size=config.beam_size,
     )
     summarizer = providers.Singleton(
         GeminiSummarizer,
@@ -65,6 +65,7 @@ container = Container()
 container.config.repo_url.from_env("GITHUB_REPO_URL", required=True)
 container.config.api_key.from_env("GOOGLE_API_KEY", required=True)
 container.config.model_size.from_env("MODEL_SIZE", default="small")
+container.config.beam_size.from_env("BEAM_SIZE", default=5, as_=int)
 audio_handler = container.audio_handler()
 
 meetings: dict[int, Meeting] = {}

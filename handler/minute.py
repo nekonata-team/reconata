@@ -51,7 +51,7 @@ class MinuteAudioHandler(AudioHandler):
             yield SendThreadData(content=AUDIO_NOT_RECORDED)
             return
 
-        handler = AttendeesHandler(attendees, self.dir)
+        handler = AttendeesHandler(attendees, self.dir, self.encoding)
 
         yield SendThreadData(
             embed=discord.Embed(
@@ -59,10 +59,10 @@ class MinuteAudioHandler(AudioHandler):
             )
         )
 
-        handler.save_all()
+        files = handler.save_all()
 
         try:
-            mixed_file_path = handler.mix()
+            mixed_file_path = handler.mix(files)
             yield SendThreadData(
                 embed=discord.Embed(
                     description="ミックスされた音声ファイルを保存しました。",
@@ -107,8 +107,8 @@ class MinuteAudioHandler(AudioHandler):
             additional_context = handler.get_additional_context()
             self.summarize_prompt_provider.additional_context = additional_context
 
-            summarizer = MeetingSummarizer(self.summarizer)
             summary_path = handler.root / "summary.md"
+            summarizer = MeetingSummarizer(self.summarizer)
             summary = summarizer(
                 transcription,
                 output_file=summary_path,

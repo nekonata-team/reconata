@@ -22,9 +22,7 @@ class AttendeesHandler:
     Attendeesのデータをもとに副作用するクラス
     """
 
-    def __init__(
-        self, attendees: Attendees, dir: Path = Path("."), encoding: str = "wav"
-    ):
+    def __init__(self, attendees: Attendees, dir: Path, encoding: str):
         self.attendees = attendees
         self.path_builder = PathBuilder()
         self.root = self.path_builder.session_root(dir)
@@ -44,10 +42,12 @@ class AttendeesHandler:
 
         return output_files
 
-    def mix(self) -> Path:
+    def mix(self, files: list[Path]) -> Path:
         output_file = self.path_builder.mixed_audio(self.root, self.encoding)
         segments: list[AudioSegment] = [
-            AudioSegment.from_file(file) for file in self.attendees.values()
+            AudioSegment.from_file(file)
+            for file in files
+            if file.exists() and file.is_file()
         ]
 
         if not segments:

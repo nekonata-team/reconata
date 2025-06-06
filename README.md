@@ -24,6 +24,12 @@ devcontainerを利用して開発
 
 左下の「><」アイコンをクリックし、「Reopen in Container」を選択
 
+### Windowsで開発する場合
+
+デフォルトでGPUが無効になっている。正確にはCPU環境で動作する設定になっている
+
+GPU環境でのテストをしたい場合は、`devcontainer.json`の`dockerComposeFile`を適切に変更すること
+
 ## 補足
 
 - Python 3.11で開発

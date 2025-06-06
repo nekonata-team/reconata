@@ -3,11 +3,17 @@ from pathlib import Path
 
 
 class PathBuilder:
-    def user_audio(self, folder: Path, user_id: int, ext: str) -> Path:
-        return folder / f"{user_id}.{ext}"
+    def __init__(self, dir: Path, encoding: str):
+        self.dir = dir
+        self.encoding = encoding
 
-    def mixed_audio(self, folder: Path, ext: str) -> Path:
-        return folder / f"mixed.{ext}"
+        dir.mkdir(parents=True, exist_ok=True)
+
+    def user_audio(self, user_id: int) -> Path:
+        return self.dir / f"{user_id}.{self.encoding}"
+
+    def mixed_audio(self) -> Path:
+        return self.dir / f"mixed.{self.encoding}"
 
     def session_root(self, base_folder: Path, dt: datetime | None = None) -> Path:
         if dt is None:
@@ -19,3 +25,9 @@ class PathBuilder:
             return int(path.stem)
         except Exception:
             raise ValueError(f"Invalid audio file name: {path.name}")
+
+    def summary(self) -> Path:
+        return self.dir / "summary.md"
+
+    def transcription(self) -> Path:
+        return self.dir / "transcription.txt"

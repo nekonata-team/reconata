@@ -11,8 +11,6 @@ from summarizer.summarizer import Summarizer
 from transcriber.transcriber import Transcriber
 
 from handler.feature.attendees_handler import AttendeesHandler, NoAudioToMixError
-from handler.feature.summarize import MeetingSummarizer
-from handler.feature.transcribe import MeetingTranscriber
 from handler.handler import (
     AUDIO_NOT_RECORDED,
     AudioHandler,
@@ -88,15 +86,12 @@ class MinuteAudioHandler(AudioHandler):
         )
 
         try:
-            transcription_path = handler.root / "transcription.txt"
-            transcriber = MeetingTranscriber(self.transcriber)
-            transcription = transcriber(
+            transcription_path = handler.path_builder.transcription()
+            transcription, messages = self._transcribe_and_save(
                 mixed_file_path,
-                output_file=transcription_path,
+                transcription_path,
             )
-            yield SendThreadData(
-                embed=discord.Embed(description="文字起こしが完了しました。")
-            )
+            yield from messages
         except Exception as e:
             yield SendThreadData(
                 embed=discord.Embed(description=f"文字起こしに失敗しました: {e}")
@@ -104,31 +99,64 @@ class MinuteAudioHandler(AudioHandler):
             return
 
         try:
+            summary_path = handler.path_builder.summary()
             additional_context = handler.get_additional_context()
-            self.summarize_prompt_provider.additional_context = additional_context
-
-            summary_path = handler.root / "summary.md"
-            summarizer = MeetingSummarizer(self.summarizer)
-            summary = summarizer(
+            summary, messages = self._summarize_and_send(
+                summary_path,
                 transcription,
-                output_file=summary_path,
+                additional_context,
             )
-            embed = discord.Embed(
-                title="議事録",
-                description=summary,
-                timestamp=datetime.now(),
-            )
-            view = CommitView(post_process=self.post_process)
-            yield SendThreadData(
-                embed=embed,
-            )
-            yield SendData(
-                files=[
-                    discord.File(transcription_path, "transcription.txt"),
-                ],
-                embed=embed,
-                view=view,
-            )
+            yield from messages
         except Exception as e:
             yield SendThreadData(content=f"要約に失敗しました: {e}")
             return
+
+        embed = discord.Embed(
+            title="要約",
+            description=summary,
+            timestamp=datetime.now(),
+        )
+        view = CommitView(post_process=self.post_process)
+        yield SendData(
+            file=discord.File(transcription_path, "transcription.txt"),
+            embed=embed,
+            view=view,
+        )
+
+    def _transcribe_and_save(
+        self,
+        mixed_file_path: Path,
+        transcription_path: Path,
+    ) -> tuple[str, Iterator[MessageData]]:
+        transcription = self.transcriber.transcribe(str(mixed_file_path))
+        with open(transcription_path, "w", encoding="utf-8") as f:
+            f.write(transcription)
+
+        def message_iter():
+            yield SendThreadData(
+                embed=discord.Embed(description="文字起こしが完了しました。")
+            )
+
+        return transcription, message_iter()
+
+    def _summarize_and_send(
+        self,
+        summary_path: Path,
+        transcription: str,
+        context: str,
+    ) -> tuple[str, Iterator[MessageData]]:
+        self.summarize_prompt_provider.additional_context = context
+        summary = self.summarizer.generate_meeting_notes(transcription)
+        with open(summary_path, "w", encoding="utf-8") as f:
+            f.write(summary)
+        embed = discord.Embed(
+            description=summary,
+            timestamp=datetime.now(),
+        )
+
+        def message_iter():
+            yield SendThreadData(
+                embed=embed,
+            )
+
+        return summary, message_iter()

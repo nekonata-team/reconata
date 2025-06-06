@@ -24,18 +24,15 @@ class AttendeesHandler:
 
     def __init__(self, attendees: Attendees, dir: Path, encoding: str):
         self.attendees = attendees
-        self.path_builder = PathBuilder()
         self.root = self.path_builder.session_root(dir)
-        self.encoding = encoding
-
-        self.root.mkdir(parents=True, exist_ok=True)
+        self.path_builder = PathBuilder(self.root, encoding)
 
     def save_all(self) -> list[Path]:
         output_files: list[Path] = []
 
         for user_id, data in self.attendees.items():
             audio = data.audio
-            file_path = self.path_builder.user_audio(self.root, user_id, self.encoding)
+            file_path = self.path_builder.user_audio(user_id)
             with open(file_path, "wb") as f:
                 f.write(audio.file.read())
             output_files.append(file_path)
@@ -43,7 +40,7 @@ class AttendeesHandler:
         return output_files
 
     def mix(self, files: list[Path]) -> Path:
-        output_file = self.path_builder.mixed_audio(self.root, self.encoding)
+        output_file = self.path_builder.mixed_audio()
         segments: list[AudioSegment] = [
             AudioSegment.from_file(file)
             for file in files

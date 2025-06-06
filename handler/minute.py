@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, cast
 
 import discord
 from post_process.post_process import PostProcess
@@ -8,14 +8,21 @@ from summarizer.prompt_provider.summarize_prompt_provider import (
     ContextualSummarizePromptProvider,
 )
 from summarizer.summarizer import Summarizer
-from transcriber.transcriber import Transcriber
+from transcriber.transcriber import IterableTranscriber, Transcriber
 
 from handler.feature.attendees_handler import AttendeesHandler, NoAudioToMixError
 from handler.handler import (
     AUDIO_NOT_RECORDED,
     AudioHandler,
 )
-from types_ import Attendees, CreateThreadData, MessageData, SendData, SendThreadData
+from types_ import (
+    Attendees,
+    CreateThreadData,
+    EditMessageData,
+    MessageData,
+    SendData,
+    SendThreadData,
+)
 from view import CommitView
 
 
@@ -87,11 +94,22 @@ class MinuteAudioHandler(AudioHandler):
 
         try:
             transcription_path = handler.path_builder.transcription()
-            transcription, messages = self._transcribe_and_save(
-                mixed_file_path,
-                transcription_path,
-            )
-            yield from messages
+
+            if isinstance(self.transcriber, IterableTranscriber):
+                lines, messages = self._transcribe_iter(
+                    mixed_file_path,
+                )
+                yield from messages
+                transcription = "\n".join(lines)
+                with open(transcription_path, "w", encoding="utf-8") as f:
+                    f.write(transcription)
+
+            else:
+                transcription, messages = self._transcribe_and_save(
+                    mixed_file_path,
+                    transcription_path,
+                )
+                yield from messages
         except Exception as e:
             yield SendThreadData(
                 embed=discord.Embed(description=f"文字起こしに失敗しました: {e}")
@@ -101,7 +119,7 @@ class MinuteAudioHandler(AudioHandler):
         try:
             summary_path = handler.path_builder.summary()
             additional_context = handler.get_additional_context()
-            summary, messages = self._summarize_and_send(
+            summary, messages = self._summarize_and_save(
                 summary_path,
                 transcription,
                 additional_context,
@@ -118,7 +136,7 @@ class MinuteAudioHandler(AudioHandler):
         )
         view = CommitView(post_process=self.post_process)
         yield SendData(
-            file=discord.File(transcription_path, "transcription.txt"),
+            files=[discord.File(transcription_path, "transcription.txt")],
             embed=embed,
             view=view,
         )
@@ -139,7 +157,32 @@ class MinuteAudioHandler(AudioHandler):
 
         return transcription, message_iter()
 
-    def _summarize_and_send(
+    def _transcribe_iter(
+        self,
+        mixed_file_path: Path,
+    ) -> tuple[list[str], Iterator[MessageData]]:
+        segments = cast(IterableTranscriber, self.transcriber).transcribe_iter(
+            str(mixed_file_path)
+        )
+        lines: list[str] = []
+
+        def message_iter():
+            for segment in segments:
+                lines.append(segment.text)
+                embed = discord.Embed(description="文字起こしの一部が保存されました。")
+                embed.add_field(
+                    name="進捗",
+                    value=f"{segment.end:.2f} s",
+                )
+                embed.add_field(
+                    name="プレビュー",
+                    value=segment.text,
+                )
+                yield EditMessageData(embed=embed)
+
+        return lines, message_iter()
+
+    def _summarize_and_save(
         self,
         summary_path: Path,
         transcription: str,

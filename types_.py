@@ -24,7 +24,6 @@ class MessageData(ABC): ...
 @dataclass(frozen=True)
 class SendData(MessageData):
     content: str | None = None
-    file: discord.File | None = None
     files: list[discord.File] | None = None
     embed: discord.Embed | None = None
     view: discord.ui.View | None = None
@@ -33,6 +32,12 @@ class SendData(MessageData):
 @dataclass(frozen=True)
 class AppendEmbedData(MessageData):
     embed: discord.Embed
+
+
+@dataclass(frozen=True)
+class EditMessageData(MessageData):
+    content: str | None = None
+    embed: discord.Embed | None = None
 
 
 @dataclass(frozen=True)

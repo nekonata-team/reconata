@@ -24,8 +24,8 @@ class AttendeesHandler:
 
     def __init__(self, attendees: Attendees, dir: Path, encoding: str):
         self.attendees = attendees
-        self.root = self.path_builder.session_root(dir)
-        self.path_builder = PathBuilder(self.root, encoding)
+        session_root = dir / datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.path_builder = PathBuilder(session_root, encoding)
 
     def save_all(self) -> list[Path]:
         output_files: list[Path] = []

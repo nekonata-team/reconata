@@ -1,6 +1,8 @@
+import asyncio
+import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
-from logging import getLogger
 from pathlib import Path
 from typing import cast
 
@@ -20,6 +22,7 @@ from types_ import (
     AppendEmbedData,
     AttendeeData,
     CreateThreadData,
+    EditMessageData,
     Meeting,
     SendData,
     SendThreadData,
@@ -28,7 +31,12 @@ from view import CommitView
 
 load_dotenv()
 
-logger = getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 bot = discord.Bot()
 
@@ -176,21 +184,29 @@ async def on_finish_recording(sink: FileSink, channel: discord.TextChannel):
 
     thread: discord.Thread | None = None
     focusing_message: discord.Message | None = None
-    for data in audio_handler(attendees):
-        if isinstance(data, SendData):
-            focusing_message = await channel.send(**data.__dict__)
-        elif isinstance(data, AppendEmbedData):
-            if (msg := focusing_message) is not None:
-                focusing_message = await msg.edit(embeds=[*msg.embeds, data.embed])
-            else:
-                logger.error("No focusing message to append embed data.")
-        elif isinstance(data, CreateThreadData):
-            thread = await channel.create_thread(**data.__dict__)
-        elif isinstance(data, SendThreadData):
-            if thread is not None:
-                focusing_message = await thread.send(**data.__dict__)
-            else:
-                logger.error("No thread to send data to.")
+
+    loop = asyncio.get_event_loop()
+    with ThreadPoolExecutor() as executor:
+        for data in await loop.run_in_executor(executor, audio_handler, attendees):
+            if isinstance(data, SendData):
+                focusing_message = await channel.send(**data.__dict__)
+            elif isinstance(data, AppendEmbedData):
+                if (msg := focusing_message) is not None:
+                    focusing_message = await msg.edit(embeds=[*msg.embeds, data.embed])
+                else:
+                    logger.error("No focusing message to append embed data.")
+            elif isinstance(data, CreateThreadData):
+                thread = await channel.create_thread(**data.__dict__)
+            elif isinstance(data, SendThreadData):
+                if thread is not None:
+                    focusing_message = await thread.send(**data.__dict__)
+                else:
+                    logger.error("No thread to send data to.")
+            elif isinstance(data, EditMessageData):
+                if focusing_message is not None:
+                    focusing_message = await focusing_message.edit(**data.__dict__)
+                else:
+                    logger.error("No focusing message to edit with data.")
 
     # clean up
     del meetings[channel.guild.id]

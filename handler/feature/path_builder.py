@@ -1,4 +1,3 @@
-from datetime import datetime
 from pathlib import Path
 
 
@@ -14,11 +13,6 @@ class PathBuilder:
 
     def mixed_audio(self) -> Path:
         return self.dir / f"mixed.{self.encoding}"
-
-    def session_root(self, base_folder: Path, dt: datetime | None = None) -> Path:
-        if dt is None:
-            dt = datetime.now()
-        return base_folder / dt.strftime("%Y%m%d_%H%M%S")
 
     def user_id_from(self, path: Path) -> int:
         try:

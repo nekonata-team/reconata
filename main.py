@@ -15,7 +15,7 @@ from summarizer.prompt_provider.formatted_markdown import (
 from transcriber.faster_whisper import FasterWhisperTranscriber
 
 from file_sink import FileSink
-from handler import MinuteAudioHandler
+from handler.minute import MinuteAudioHandler
 from types_ import (
     AppendEmbedData,
     AttendeeData,
@@ -53,7 +53,7 @@ class Container(containers.DeclarativeContainer):
     )
     audio_handler = providers.Singleton(
         MinuteAudioHandler,
-        folder_path=Path("./data"),
+        dir=Path("./data"),
         transcriber=transcriber,
         summarizer=summarizer,
         summarize_prompt_provider=prompt_provider,

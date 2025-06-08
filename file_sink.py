@@ -1,14 +1,19 @@
 import os
 import tempfile
+from logging import getLogger
 
 import discord
 from discord.types.snowflake import Snowflake
 
 _TMP_DIR = "tmp"
 
+logger = getLogger(__name__)
+
 
 class FileSink(discord.sinks.Sink):
     def write(self, data: bytes, user: Snowflake) -> None:
+        logger.debug(f"Received audio data for user {user}, size: {len(data)} bytes")
+
         if user not in self.audio_data:
             os.makedirs(_TMP_DIR, exist_ok=True)
             temp = tempfile.NamedTemporaryFile(

@@ -34,15 +34,12 @@ class MinuteAudioHandler(AudioHandler):
         summarizer: Summarizer,
         summarize_prompt_provider: ContextualSummarizePromptProvider,
         post_process: PostProcess,
-        encoding: str = "wav",
     ):
         self.dir = dir
         self.transcriber = transcriber
         self.summarizer = summarizer
         self.summarize_prompt_provider = summarize_prompt_provider
         self.post_process = post_process
-
-        self.encoding = encoding
 
     def __call__(self, attendees: Attendees) -> Iterator[MessageData]:
         today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

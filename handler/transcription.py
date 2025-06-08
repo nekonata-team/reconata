@@ -25,12 +25,9 @@ class TranscriptionAudioHandler(AudioHandler):
         self,
         dir: Path,
         transcriber: Transcriber,
-        encoding: str = "wav",
     ):
         self.dir = dir
         self.transcriber = transcriber
-
-        self.encoding = encoding
 
     def __call__(self, attendees: Attendees) -> Iterator[MessageData]:
         today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

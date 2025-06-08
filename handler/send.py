@@ -12,10 +12,8 @@ class SendFilesAudioHandler(AudioHandler):
     def __init__(
         self,
         dir: Path,
-        encoding: str = "wav",
     ):
         self.dir = dir
-        self.encoding = encoding
 
     def __call__(self, attendees: Attendees) -> Iterator[MessageData]:
         if not attendees:

@@ -12,9 +12,8 @@ from types_ import Attendees, MessageData, SendData
 
 
 class SaveToFolderAudioHandler(AudioHandler):
-    def __init__(self, dir: Path, encoding: str = "wav"):
+    def __init__(self, dir: Path):
         self.dir = dir
-        self.encoding = encoding
 
     def __call__(self, attendees: Attendees) -> Iterator[MessageData]:
         if not attendees:

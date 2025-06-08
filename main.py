@@ -83,6 +83,7 @@ meetings: dict[int, Meeting] = {}
     description="録音を開始します。ボイスチャンネルに参加してから実行してください。"
 )
 async def start(ctx: discord.ApplicationContext):
+    await ctx.defer()
     member = cast(discord.Member, ctx.author)
     voice = member.voice
 
@@ -107,6 +108,7 @@ async def start(ctx: discord.ApplicationContext):
 
 @bot.command(description="録音を停止します。録音中のみ有効です。")
 async def stop(ctx: discord.ApplicationContext):
+    await ctx.defer()
     meeting = meetings.get(ctx.guild.id)
     if meeting is not None:
         meeting.voice_client.stop_recording()
@@ -117,6 +119,7 @@ async def stop(ctx: discord.ApplicationContext):
 
 @bot.command(description="テストメッセージとテストファイルを送信します。")
 async def test(ctx: discord.ApplicationContext):
+    await ctx.defer()
     channel = cast(discord.TextChannel, ctx.channel)
 
     # メモリ上でファイルを作成
@@ -145,6 +148,7 @@ async def test(ctx: discord.ApplicationContext):
 
 @bot.command(description="現在のパラメータや利用中のコンポーネント情報を表示します。")
 async def parameters(ctx: discord.ApplicationContext):
+    await ctx.defer()
     embed = discord.Embed(title="Current Parameters")
     embed.add_field(name="Model Size", value=container.config.model_size())
     embed.add_field(name="Beam Size", value=str(container.config.beam_size()))

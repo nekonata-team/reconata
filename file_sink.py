@@ -21,6 +21,7 @@ class FileSink(discord.sinks.MP3Sink):
             self.audio_data[user] = AudioData(temp)
 
         self.audio_data[user].write(data)
+        self.audio_data[user].file.flush()
 
     def remove_temp_files(self) -> None:
         for user, audio in self.audio_data.items():

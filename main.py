@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
+from enum import Enum
 from io import BytesIO
 from pathlib import Path
 from typing import cast
@@ -18,6 +19,7 @@ from transcriber.faster_whisper import FasterWhisperTranscriber
 
 from file_sink import FileSink
 from handler.minute import MinuteAudioHandler
+from handler.transcription import TranscriptionAudioHandler
 from types_ import (
     AppendEmbedData,
     AttendeeData,
@@ -59,14 +61,27 @@ class Container(containers.DeclarativeContainer):
         GitHubPushPostProcess,
         repo_url=config.repo_url,
     )
-    audio_handler = providers.Singleton(
-        MinuteAudioHandler,
-        dir=Path("./data"),
-        transcriber=transcriber,
-        summarizer=summarizer,
-        summarize_prompt_provider=prompt_provider,
-        post_process=post_process,
+    audio_handler = providers.Selector(
+        config.mode,
+        minute=providers.Singleton(
+            MinuteAudioHandler,  # type: ignore
+            dir=Path("./data"),
+            transcriber=transcriber,
+            summarizer=summarizer,
+            summarize_prompt_provider=prompt_provider,
+            post_process=post_process,
+        ),
+        transcription=providers.Singleton(
+            TranscriptionAudioHandler,
+            dir=Path("./data"),
+            transcriber=transcriber,
+        ),
     )
+
+
+class AudioHandlerMode(Enum):
+    MINUTE = "minute"
+    TRANSCRIPTION = "transcription"
 
 
 container = Container()
@@ -74,7 +89,7 @@ container.config.repo_url.from_env("GITHUB_REPO_URL", required=True)
 container.config.api_key.from_env("GOOGLE_API_KEY", required=True)
 container.config.model_size.from_env("MODEL_SIZE", default="small")
 container.config.beam_size.from_env("BEAM_SIZE", default=5, as_=int)
-audio_handler = container.audio_handler()
+
 
 meetings: dict[int, Meeting] = {}
 
@@ -107,8 +122,13 @@ async def start(ctx: discord.ApplicationContext):
 
 
 @bot.command(description="録音を停止します。録音中のみ有効です。")
-async def stop(ctx: discord.ApplicationContext):
+async def stop(
+    ctx: discord.ApplicationContext,
+    mode: discord.Option(AudioHandlerMode, "録音モード"),
+):
     await ctx.defer()
+
+    container.config.mode.override(mode.value)
     meeting = meetings.get(ctx.guild.id)
     if meeting is not None:
         meeting.voice_client.stop_recording()
@@ -121,8 +141,6 @@ async def stop(ctx: discord.ApplicationContext):
 async def test(ctx: discord.ApplicationContext):
     await ctx.defer()
     channel = cast(discord.TextChannel, ctx.channel)
-
-    # メモリ上でファイルを作成
 
     file_content = "これはテストファイルの内容です。"
     file_obj = BytesIO(file_content.encode("utf-8"))
@@ -157,7 +175,6 @@ async def parameters(ctx: discord.ApplicationContext):
     if repo_url and repo_url.startswith("https://") and "@github.com/" in repo_url:
         import re
 
-        # https://<PAT>@github.com/owner/repo.git → https://***@github.com/owner/repo.git
         repo_url = re.sub(r"(https://)[^@]+(@github.com/)", r"\1***\2", repo_url)
     embed.add_field(name="GitHub Repo URL", value=repo_url)
 
@@ -167,12 +184,15 @@ async def parameters(ctx: discord.ApplicationContext):
     embed.add_field(name="Summarizer", value=summarizer_class)
     embed.add_field(name="Transcriber", value=transcriber_class)
     embed.add_field(name="PostProcess", value=post_process_class)
+    embed.add_field(name="Mode", value=container.config.mode())
 
     await ctx.respond(embed=embed)
 
 
 async def on_finish_recording(sink: FileSink, channel: discord.TextChannel):
     await sink.vc.disconnect()
+
+    audio_handler = container.audio_handler()
 
     if hasattr(audio_handler, "encoding"):
         audio_handler.encoding = sink.encoding

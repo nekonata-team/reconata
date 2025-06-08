@@ -1,4 +1,5 @@
 from datetime import datetime
+from logging import getLogger
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -9,6 +10,8 @@ from handler.feature.path_builder import PathBuilder
 from types_ import Attendees
 
 _TZ = ZoneInfo("Asia/Tokyo")
+
+logger = getLogger(__name__)
 
 
 class NoAudioToMixError(Exception):
@@ -26,6 +29,11 @@ class AttendeesHandler:
         self.attendees = attendees
         session_root = dir / datetime.now().strftime("%Y%m%d_%H%M%S")
         self.path_builder = PathBuilder(session_root, encoding)
+
+        logger.info(
+            f"AttendeesHandler initialized with {len(attendees)} attendees, "
+            f"session root: {session_root}, encoding: {encoding}"
+        )
 
     def save_all(self) -> list[Path]:
         output_files: list[Path] = []

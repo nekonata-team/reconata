@@ -197,7 +197,7 @@ async def on_finish_recording(sink: FileSink, channel: discord.TextChannel):
     await sink.vc.disconnect()
 
     audio_handler: AudioHandler = container.audio_handler()
-    audio_handler.encoding = "wav"
+    audio_handler.encoding = "mp3"
 
     meeting = meetings.get(channel.guild.id)
 

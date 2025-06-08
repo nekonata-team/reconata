@@ -31,10 +31,8 @@ class AttendeesHandler:
         output_files: list[Path] = []
 
         for user_id, data in self.attendees.items():
-            audio = data.audio
             file_path = self.path_builder.user_audio(user_id)
-            with open(file_path, "wb") as f:
-                f.write(audio.file.read())
+            data.format(file_path)
             output_files.append(file_path)
 
         return output_files

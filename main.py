@@ -21,7 +21,6 @@ from file_sink import FileSink
 from handler.handler import AudioHandler
 from handler.minute import MinuteAudioHandler
 from handler.save import SaveToFolderAudioHandler
-from handler.send import SendFilesAudioHandler
 from handler.transcription import TranscriptionAudioHandler
 from types_ import (
     AttendeeData,
@@ -80,10 +79,6 @@ class Container(containers.DeclarativeContainer):
             SaveToFolderAudioHandler,
             dir=Path("./data"),
         ),
-        send=providers.Singleton(
-            SendFilesAudioHandler,
-            dir=Path("./data"),
-        ),
     )
 
 
@@ -91,7 +86,6 @@ class AudioHandlerMode(Enum):
     MINUTE = "minute"
     TRANSCRIPTION = "transcription"
     SAVE = "save"
-    SEND = "send"
 
 
 container = Container()
@@ -203,16 +197,14 @@ async def on_finish_recording(sink: FileSink, channel: discord.TextChannel):
     await sink.vc.disconnect()
 
     audio_handler: AudioHandler = container.audio_handler()
-    audio_handler.encoding = sink.encoding
+    audio_handler.encoding = "wav"
 
     meeting = meetings.get(channel.guild.id)
 
     if meeting is None:
         return
 
-    attendees = {
-        user_id: AttendeeData(audio=audio) for user_id, audio in sink.audio_data.items()
-    }
+    attendees = {user: AttendeeData(file) for user, file in sink.audio_data.items()}
 
     context = MessageContext(channel=channel)
 
@@ -222,7 +214,6 @@ async def on_finish_recording(sink: FileSink, channel: discord.TextChannel):
             await data.effect(context)
     # clean up
     del meetings[channel.guild.id]
-    sink.remove_temp_files()
 
 
 if (token := os.getenv("DISCORD_BOT_TOKEN")) is not None:

@@ -19,6 +19,8 @@ from transcriber.faster_whisper import FasterWhisperTranscriber
 
 from file_sink import FileSink
 from handler.minute import MinuteAudioHandler
+from handler.save import SaveToFolderAudioHandler
+from handler.send import SendFilesAudioHandler
 from handler.transcription import TranscriptionAudioHandler
 from types_ import (
     AppendEmbedData,
@@ -64,7 +66,7 @@ class Container(containers.DeclarativeContainer):
     audio_handler = providers.Selector(
         config.mode,
         minute=providers.Singleton(
-            MinuteAudioHandler,  # type: ignore
+            MinuteAudioHandler,
             dir=Path("./data"),
             transcriber=transcriber,
             summarizer=summarizer,
@@ -76,12 +78,22 @@ class Container(containers.DeclarativeContainer):
             dir=Path("./data"),
             transcriber=transcriber,
         ),
+        save=providers.Singleton(
+            SaveToFolderAudioHandler,
+            dir=Path("./data"),
+        ),
+        send=providers.Singleton(
+            SendFilesAudioHandler,
+            dir=Path("./data"),
+        ),
     )
 
 
 class AudioHandlerMode(Enum):
     MINUTE = "minute"
     TRANSCRIPTION = "transcription"
+    SAVE = "save"
+    SEND = "send"
 
 
 container = Container()

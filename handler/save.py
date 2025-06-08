@@ -1,8 +1,6 @@
 from pathlib import Path
 from typing import Iterator
 
-import discord
-
 from handler.feature.attendees_handler import AttendeesHandler
 from handler.handler import (
     AUDIO_NOT_RECORDED,
@@ -21,7 +19,7 @@ class SaveToFolderAudioHandler(AudioHandler):
             return
 
         handler = AttendeesHandler(attendees, self.dir, self.encoding)
-        files = handler.save_all()
+        handler.save_all()
 
         content = f"録音ファイルの保存が完了しました。\n\n参加者:\n{handler.get_attendees_ids_string()}"
-        yield SendData(content=content, files=[discord.File(file) for file in files])
+        yield SendData(content=content)

@@ -1,6 +1,4 @@
 import asyncio
-import logging
-import os
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from io import BytesIO
@@ -11,6 +9,7 @@ import discord
 from container import container
 from file_sink import FileSink
 from handler.handler import AudioHandler
+from logging_config import load_logging_config
 from types_ import (
     AttendeeData,
     Meeting,
@@ -19,11 +18,10 @@ from types_ import (
 )
 from view import CommitView
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+load_logging_config()
+
+import logging
+
 logger = logging.getLogger(__name__)
 
 bot = discord.Bot()
@@ -156,6 +154,5 @@ async def on_finish_recording(sink: FileSink, channel: discord.TextChannel):
     del meetings[channel.guild.id]
 
 
-if (token := os.getenv("DISCORD_BOT_TOKEN")) is not None:
-    logger.info("Starting Discord bot...")
-    bot.run(token)
+logger.info("Starting Discord bot...")
+bot.run(container.config.discord_bot_token())

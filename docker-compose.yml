@@ -9,6 +9,7 @@ services:
       - .env
     volumes:
       - .:/app
+      - ~/.huggingface:/root/.cache/huggingface
     working_dir: /app
     command: python main.py
 
@@ -24,6 +25,7 @@ services:
       - MODEL_SIZE=small
     volumes:
       - .:/app
+      - ~/.huggingface:/root/.cache/huggingface
     working_dir: /app
     tty: true
 
@@ -39,5 +41,6 @@ services:
       - .env
     volumes:
       - .:/app
+      - ~/.huggingface:/root/.cache/huggingface
     working_dir: /app
     entrypoint: python cli.py

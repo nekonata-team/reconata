@@ -4,24 +4,13 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from io import BytesIO
-from pathlib import Path
 from typing import cast
 
 import discord
-from dependency_injector import containers, providers
-from dotenv import load_dotenv
-from post_process.github_push import GitHubPushPostProcess
-from summarizer.gemini import GeminiSummarizer
-from summarizer.prompt_provider.formatted_markdown import (
-    FormattedMarkdownSummarizePromptProvider,
-)
-from transcriber.faster_whisper import FasterWhisperTranscriber
 
+from container import container
 from file_sink import FileSink
 from handler.handler import AudioHandler
-from handler.minute import MinuteAudioHandler
-from handler.save import SaveToFolderAudioHandler
-from handler.transcription import TranscriptionAudioHandler
 from types_ import (
     AttendeeData,
     Meeting,
@@ -29,8 +18,6 @@ from types_ import (
     SendData,
 )
 from view import CommitView
-
-load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,57 +29,10 @@ logger = logging.getLogger(__name__)
 bot = discord.Bot()
 
 
-class Container(containers.DeclarativeContainer):
-    config = providers.Configuration()
-
-    prompt_provider = providers.Singleton(FormattedMarkdownSummarizePromptProvider)
-    transcriber = providers.Singleton(
-        FasterWhisperTranscriber,
-        model_size=config.model_size,
-        beam_size=config.beam_size,
-    )
-    summarizer = providers.Singleton(
-        GeminiSummarizer,
-        api_key=config.api_key,
-        summarize_prompt_provider=prompt_provider,
-    )
-    post_process = providers.Singleton(
-        GitHubPushPostProcess,
-        repo_url=config.repo_url,
-    )
-    audio_handler = providers.Selector(
-        config.mode,
-        minute=providers.Singleton(
-            MinuteAudioHandler,
-            dir=Path("./data"),
-            transcriber=transcriber,
-            summarizer=summarizer,
-            summarize_prompt_provider=prompt_provider,
-            post_process=post_process,
-        ),
-        transcription=providers.Singleton(
-            TranscriptionAudioHandler,
-            dir=Path("./data"),
-            transcriber=transcriber,
-        ),
-        save=providers.Singleton(
-            SaveToFolderAudioHandler,
-            dir=Path("./data"),
-        ),
-    )
-
-
 class AudioHandlerMode(Enum):
     MINUTE = "minute"
     TRANSCRIPTION = "transcription"
     SAVE = "save"
-
-
-container = Container()
-container.config.repo_url.from_env("GITHUB_REPO_URL", required=True)
-container.config.api_key.from_env("GOOGLE_API_KEY", required=True)
-container.config.model_size.from_env("MODEL_SIZE", default="small")
-container.config.beam_size.from_env("BEAM_SIZE", default=5, as_=int)
 
 
 meetings: dict[int, Meeting] = {}

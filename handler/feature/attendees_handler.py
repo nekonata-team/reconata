@@ -35,7 +35,7 @@ class AttendeesHandler:
             f"session root: {session_root}, encoding: {encoding}"
         )
 
-    def save_all(self) -> list[Path]:
+    def save_all_audio(self) -> list[Path]:
         output_files: list[Path] = []
 
         for user_id, data in self.attendees.items():
@@ -44,6 +44,15 @@ class AttendeesHandler:
             output_files.append(file_path)
 
         return output_files
+
+    def save_context(self) -> str:
+        context = self._get_context()
+        context_file = self.path_builder.context()
+
+        with context_file.open("w", encoding="utf-8") as f:
+            f.write(context)
+
+        return context
 
     def mix(self, files: list[Path]) -> Path:
         output_file = self.path_builder.mixed_audio()
@@ -69,7 +78,7 @@ class AttendeesHandler:
             return "参加者がいません。"
         return "\n".join(f"- `{user_id}`" for user_id in self.attendees.keys())
 
-    def get_additional_context(self) -> str:
+    def _get_context(self) -> str:
         participant_names = ",".join(
             [
                 NekonataContext.id2name.get(str(id), f"<@{id}>")

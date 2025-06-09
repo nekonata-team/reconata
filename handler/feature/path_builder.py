@@ -14,6 +14,9 @@ class PathBuilder:
     def mixed_audio(self) -> Path:
         return self.dir / f"mixed.{self.encoding}"
 
+    def context(self) -> Path:
+        return self.dir / "context.txt"
+
     def user_id_from(self, path: Path) -> int:
         try:
             return int(path.stem)

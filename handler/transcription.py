@@ -49,7 +49,7 @@ class TranscriptionAudioHandler(AudioHandler):
             )
         )
 
-        files = handler.save_all()
+        files = handler.save_all_audio()
 
         try:
             mixed_file_path = handler.mix(files)

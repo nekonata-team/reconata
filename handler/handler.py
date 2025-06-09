@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Iterator
 
 from types_ import Attendees, MessageData
@@ -12,4 +13,14 @@ class AudioHandler(ABC):
 
     @abstractmethod
     def __call__(self, attendees: Attendees) -> Iterator[MessageData]:
+        pass
+
+
+class AudioHandlerFromCLI(ABC):
+    @abstractmethod
+    def __call__(
+        self,
+        mixed_audio_path: Path,
+        context_path: Path,
+    ) -> Iterator[MessageData]:
         pass

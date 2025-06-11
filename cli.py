@@ -4,11 +4,9 @@ from pathlib import Path
 
 import discord
 
+from command import configure
 from container import container
-from logging_config import load_logging_config
 from types_ import MessageContext
-
-load_logging_config()
 
 
 def parse_args():
@@ -41,40 +39,35 @@ def get_channel_id_from_url(channel_url):
     return int(m.group(1))
 
 
-async def send_messages_to_channel(messages, channel_id: int):
-    token = container.config.discord_bot_token()
-    intents = discord.Intents.default()
-    client = discord.Client(intents=intents)
+def on_ready_send_messages_to_channel(bot: discord.Bot, channel_id: int):
+    audio_handler = container.audio_handler_from_cli()
+    messages = audio_handler(mixed_audio_path, context_path)
 
-    @client.event
+    @bot.event
     async def on_ready():
-        channel = client.get_channel(channel_id)
+        channel = bot.get_channel(channel_id)
         if channel is None:
             print(f"チャンネルID {channel_id} が見つかりません")
-            await client.close()
+            await bot.close()
             return
         # TextChannel型にキャスト
         if not isinstance(channel, discord.TextChannel):
             print(f"チャンネルID {channel_id} はTextChannelではありません")
-            await client.close()
+            await bot.close()
             return
         context = MessageContext(channel=channel)
         try:
-            async for msg in _aiter(messages):
+            for msg in messages:
                 await msg.effect(context)
         except Exception as e:
             print(f"送信中にエラー: {e}")
-        await client.close()
-
-    # イテレータをasyncイテレータに変換
-    async def _aiter(it):
-        for item in it:
-            yield item
-
-    await client.start(token)
 
 
-async def main():
+if __name__ == "__main__":
+    from logging_config import load_logging_config
+
+    load_logging_config()
+
     args = parse_args()
     mixed_audio_path = args.mixed_audio_path
     context_path = args.context_path
@@ -82,8 +75,7 @@ async def main():
     try:
         channel_id = get_channel_id_from_url(args.channel_url)
     except ValueError as e:
-        print(f"チャンネルURLの解析に失敗: {e}")
-        return
+        raise ValueError(f"チャンネルURLの解析に失敗: {e}")
 
     if not mixed_audio_path.exists():
         raise FileNotFoundError(
@@ -94,12 +86,6 @@ async def main():
             f"指定されたコンテキストファイルが存在しません: {context_path}"
         )
 
-    audio_handler = container.audio_handler_from_cli()
-    messages = audio_handler(mixed_audio_path, context_path)
-    await send_messages_to_channel(messages, channel_id)
-
-
-if __name__ == "__main__":
-    import asyncio
-
-    asyncio.run(main())
+    bot = configure()
+    on_ready_send_messages_to_channel(bot, channel_id)
+    bot.run(container.config.discord_bot_token())

@@ -3,8 +3,8 @@ from post_process.post_process import PostProcess
 
 
 class CommitView(discord.ui.View):
-    def __init__(self, post_process: PostProcess, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, post_process: PostProcess):
+        super().__init__(timeout=None)
         self.post_process = post_process
 
     @discord.ui.button(label="コミット", style=discord.ButtonStyle.primary, emoji="🚀")
@@ -40,10 +40,8 @@ class ConfirmView(discord.ui.View):
         self,
         post_process: PostProcess,
         target_message: discord.Message,
-        *args,
-        **kwargs,
     ):
-        super().__init__(*args, **kwargs)
+        super().__init__()
         self.post_process = post_process
         self.target_message = target_message
 
@@ -78,8 +76,8 @@ class ConfirmView(discord.ui.View):
 
 
 class SummaryEditModal(discord.ui.Modal):
-    def __init__(self, *args, initial_summary: str, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, initial_summary: str) -> None:
+        super().__init__()
         self.summary = discord.ui.InputText(
             label="内容",
             style=discord.InputTextStyle.long,

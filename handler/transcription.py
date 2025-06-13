@@ -5,12 +5,6 @@ from typing import cast
 import discord
 from nekomeeta.transcriber.transcriber import IterableTranscriber, Transcriber
 
-from handler.feature.attendees_handler import AttendeesHandler, NoAudioToMixError
-from handler.handler import (
-    AUDIO_NOT_RECORDED,
-    AudioHandler,
-    AudioHandlerResult,
-)
 from types_ import (
     Attendees,
     CreateThreadData,
@@ -18,6 +12,13 @@ from types_ import (
     SendData,
     SendThreadData,
 )
+
+from .audio_handler import (
+    AUDIO_NOT_RECORDED,
+    AudioHandler,
+    AudioHandlerResult,
+)
+from .feature.attendees_handler import AttendeesHandler, NoAudioToMixError
 
 
 class TranscriptionAudioHandler(AudioHandler):

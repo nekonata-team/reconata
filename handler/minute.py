@@ -11,14 +11,6 @@ from nekomeeta.summarizer.prompt_provider.summarize_prompt_provider import (
 from nekomeeta.summarizer.summarizer import Summarizer
 from nekomeeta.transcriber.transcriber import IterableTranscriber, Transcriber
 
-from handler.feature.attendees_handler import AttendeesHandler, NoAudioToMixError
-from handler.feature.path_builder import PathBuilder
-from handler.handler import (
-    AUDIO_NOT_RECORDED,
-    AudioHandler,
-    AudioHandlerFromCLI,
-    AudioHandlerResult,
-)
 from types_ import (
     Attendees,
     CreateThreadData,
@@ -28,6 +20,15 @@ from types_ import (
 )
 from view import CommitView
 
+from .audio_handler import (
+    AUDIO_NOT_RECORDED,
+    AudioHandler,
+    AudioHandlerFromCLI,
+    AudioHandlerResult,
+)
+from .feature.attendees_handler import AttendeesHandler, NoAudioToMixError
+from .feature.path_builder import PathBuilder
+
 logger = getLogger(__name__)
 
 
@@ -35,7 +36,7 @@ class MinuteAudioHandler(AudioHandler):
     def __init__(
         self,
         dir: Path,
-        transcriber: Transcriber,
+        transcriber: Transcriber | IterableTranscriber,
         summarizer: Summarizer,
         summarize_prompt_provider: ContextualSummarizePromptProvider,
         post_process: PostProcess,
@@ -157,7 +158,9 @@ class MinuteAudioHandler(AudioHandler):
         mixed_file_path: Path,
         transcription_path: Path,
     ) -> tuple[str, AudioHandlerResult]:
-        transcription = self.transcriber.transcribe(str(mixed_file_path))
+        transcription = cast(Transcriber, self.transcriber).transcribe(
+            str(mixed_file_path)
+        )
         with open(transcription_path, "w", encoding="utf-8") as f:
             f.write(transcription)
 
@@ -244,9 +247,18 @@ class MinuteAudioHandlerFromCLI(AudioHandlerFromCLI):
             f"Transcribing audio from {mixed_audio_path} to {transcription_path}"
         )
 
-        transcription = self.transcriber.transcribe(str(mixed_audio_path))
-        with open(transcription_path, "w", encoding="utf-8") as f:
-            f.write(transcription)
+        if isinstance(self.transcriber, IterableTranscriber):
+            transcription = ""
+            async for segment in self.transcriber.transcribe_iter(
+                str(mixed_audio_path)
+            ):
+                transcription += segment.text + "\n"
+            with open(transcription_path, "w", encoding="utf-8") as f:
+                f.write(transcription)
+        else:
+            transcription = self.transcriber.transcribe(str(mixed_audio_path))
+            with open(transcription_path, "w", encoding="utf-8") as f:
+                f.write(transcription)
 
         logger.info("Transcription completed.")
         logger.info(

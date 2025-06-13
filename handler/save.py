@@ -1,12 +1,13 @@
 from pathlib import Path
 
-from handler.feature.attendees_handler import AttendeesHandler
-from handler.handler import (
+from types_ import Attendees, SendData
+
+from .audio_handler import (
     AUDIO_NOT_RECORDED,
     AudioHandler,
     AudioHandlerResult,
 )
-from types_ import Attendees, SendData
+from .feature.attendees_handler import AttendeesHandler
 
 
 class SaveToFolderAudioHandler(AudioHandler):

@@ -6,7 +6,7 @@ import discord
 
 from container import container
 from file_sink import FileSink
-from handler.handler import AudioHandler
+from handler.audio_handler import AudioHandler
 from types_ import (
     AttendeeData,
     Meeting,

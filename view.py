@@ -76,8 +76,8 @@ class ConfirmView(discord.ui.View):
 
 
 class SummaryEditModal(discord.ui.Modal):
-    def __init__(self, initial_summary: str) -> None:
-        super().__init__()
+    def __init__(self, title: str, initial_summary: str) -> None:
+        super().__init__(title=title)
         self.summary = discord.ui.InputText(
             label="内容",
             style=discord.InputTextStyle.long,

@@ -1,20 +1,20 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, cast
+from typing import cast
 
 import discord
-from transcriber.transcriber import IterableTranscriber, Transcriber
+from nekomeeta.transcriber.transcriber import IterableTranscriber, Transcriber
 
 from handler.feature.attendees_handler import AttendeesHandler, NoAudioToMixError
 from handler.handler import (
     AUDIO_NOT_RECORDED,
     AudioHandler,
+    AudioHandlerResult,
 )
 from types_ import (
     Attendees,
     CreateThreadData,
     EditMessageData,
-    MessageData,
     SendData,
     SendThreadData,
 )
@@ -29,7 +29,7 @@ class TranscriptionAudioHandler(AudioHandler):
         self.dir = dir
         self.transcriber = transcriber
 
-    def __call__(self, attendees: Attendees) -> Iterator[MessageData]:
+    async def __call__(self, attendees: Attendees) -> AudioHandlerResult:
         today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         yield CreateThreadData(
             name="録音議事録スレッド - " + today,
@@ -84,7 +84,8 @@ class TranscriptionAudioHandler(AudioHandler):
                 lines, messages = self._transcribe_iter(
                     mixed_file_path,
                 )
-                yield from messages
+                async for message in messages:
+                    yield message
                 transcription = "\n".join(lines)
                 with open(transcription_path, "w", encoding="utf-8") as f:
                     f.write(transcription)
@@ -94,7 +95,8 @@ class TranscriptionAudioHandler(AudioHandler):
                     mixed_file_path,
                     transcription_path,
                 )
-                yield from messages
+                async for message in messages:
+                    yield message
         except Exception as e:
             yield SendThreadData(
                 embed=discord.Embed(description=f"文字起こしに失敗しました: {e}")
@@ -109,12 +111,12 @@ class TranscriptionAudioHandler(AudioHandler):
         self,
         mixed_file_path: Path,
         transcription_path: Path,
-    ) -> tuple[str, Iterator[MessageData]]:
+    ) -> tuple[str, AudioHandlerResult]:
         transcription = self.transcriber.transcribe(str(mixed_file_path))
         with open(transcription_path, "w", encoding="utf-8") as f:
             f.write(transcription)
 
-        def message_iter():
+        async def message_iter():
             yield SendThreadData(
                 embed=discord.Embed(description="文字起こしが完了しました。")
             )
@@ -124,14 +126,14 @@ class TranscriptionAudioHandler(AudioHandler):
     def _transcribe_iter(
         self,
         mixed_file_path: Path,
-    ) -> tuple[list[str], Iterator[MessageData]]:
+    ) -> tuple[list[str], AudioHandlerResult]:
         segments = cast(IterableTranscriber, self.transcriber).transcribe_iter(
             str(mixed_file_path)
         )
         lines: list[str] = []
 
-        def message_iter():
-            for segment in segments:
+        async def message_iter():
+            async for segment in segments:
                 lines.append(segment.text)
                 embed = discord.Embed(description="文字起こしの一部が保存されました。")
                 embed.add_field(

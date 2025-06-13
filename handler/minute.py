@@ -1,15 +1,15 @@
 from datetime import datetime
 from logging import getLogger
 from pathlib import Path
-from typing import Iterator, cast
+from typing import cast
 
 import discord
-from post_process.post_process import PostProcess
-from summarizer.prompt_provider.summarize_prompt_provider import (
+from nekomeeta.post_process.post_process import PostProcess
+from nekomeeta.summarizer.prompt_provider.summarize_prompt_provider import (
     ContextualSummarizePromptProvider,
 )
-from summarizer.summarizer import Summarizer
-from transcriber.transcriber import IterableTranscriber, Transcriber
+from nekomeeta.summarizer.summarizer import Summarizer
+from nekomeeta.transcriber.transcriber import IterableTranscriber, Transcriber
 
 from handler.feature.attendees_handler import AttendeesHandler, NoAudioToMixError
 from handler.feature.path_builder import PathBuilder
@@ -17,12 +17,12 @@ from handler.handler import (
     AUDIO_NOT_RECORDED,
     AudioHandler,
     AudioHandlerFromCLI,
+    AudioHandlerResult,
 )
 from types_ import (
     Attendees,
     CreateThreadData,
     EditMessageData,
-    MessageData,
     SendData,
     SendThreadData,
 )
@@ -46,7 +46,7 @@ class MinuteAudioHandler(AudioHandler):
         self.summarize_prompt_provider = summarize_prompt_provider
         self.post_process = post_process
 
-    def __call__(self, attendees: Attendees) -> Iterator[MessageData]:
+    async def __call__(self, attendees: Attendees) -> AudioHandlerResult:
         today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         yield CreateThreadData(
             name="録音議事録スレッド - " + today,
@@ -108,7 +108,8 @@ class MinuteAudioHandler(AudioHandler):
                 lines, messages = self._transcribe_iter(
                     mixed_file_path,
                 )
-                yield from messages
+                async for message in messages:
+                    yield message
                 transcription = "\n".join(lines)
                 with open(transcription_path, "w", encoding="utf-8") as f:
                     f.write(transcription)
@@ -118,7 +119,8 @@ class MinuteAudioHandler(AudioHandler):
                     mixed_file_path,
                     transcription_path,
                 )
-                yield from messages
+                async for message in messages:
+                    yield message
         except Exception as e:
             yield SendThreadData(
                 embed=discord.Embed(description=f"文字起こしに失敗しました: {e}")
@@ -132,7 +134,8 @@ class MinuteAudioHandler(AudioHandler):
                 transcription,
                 context,
             )
-            yield from messages
+            async for message in messages:
+                yield message
         except Exception as e:
             yield SendThreadData(content=f"要約に失敗しました: {e}")
             return
@@ -153,12 +156,12 @@ class MinuteAudioHandler(AudioHandler):
         self,
         mixed_file_path: Path,
         transcription_path: Path,
-    ) -> tuple[str, Iterator[MessageData]]:
+    ) -> tuple[str, AudioHandlerResult]:
         transcription = self.transcriber.transcribe(str(mixed_file_path))
         with open(transcription_path, "w", encoding="utf-8") as f:
             f.write(transcription)
 
-        def message_iter():
+        async def message_iter():
             yield SendThreadData(
                 embed=discord.Embed(description="文字起こしが完了しました。")
             )
@@ -168,14 +171,14 @@ class MinuteAudioHandler(AudioHandler):
     def _transcribe_iter(
         self,
         mixed_file_path: Path,
-    ) -> tuple[list[str], Iterator[MessageData]]:
+    ) -> tuple[list[str], AudioHandlerResult]:
         segments = cast(IterableTranscriber, self.transcriber).transcribe_iter(
             str(mixed_file_path)
         )
         lines: list[str] = []
 
-        def message_iter():
-            for segment in segments:
+        async def message_iter():
+            async for segment in segments:
                 lines.append(segment.text)
                 embed = discord.Embed(description="文字起こしの一部が保存されました。")
                 embed.add_field(
@@ -195,7 +198,7 @@ class MinuteAudioHandler(AudioHandler):
         summary_path: Path,
         transcription: str,
         context: str,
-    ) -> tuple[str, Iterator[MessageData]]:
+    ) -> tuple[str, AudioHandlerResult]:
         self.summarize_prompt_provider.additional_context = context
         summary = self.summarizer.generate_meeting_notes(transcription)
         with open(summary_path, "w", encoding="utf-8") as f:
@@ -205,7 +208,7 @@ class MinuteAudioHandler(AudioHandler):
             timestamp=datetime.now(),
         )
 
-        def message_iter():
+        async def message_iter():
             yield SendThreadData(
                 embed=embed,
             )
@@ -228,11 +231,11 @@ class MinuteAudioHandlerFromCLI(AudioHandlerFromCLI):
         self.summarize_prompt_provider = summarize_prompt_provider
         self.post_process = post_process
 
-    def __call__(
+    async def __call__(
         self,
         mixed_audio_path: Path,
         context_path: Path,
-    ) -> Iterator[MessageData]:
+    ) -> AudioHandlerResult:
         path_builder = PathBuilder(self.dir, "---")
 
         transcription_path = path_builder.transcription()

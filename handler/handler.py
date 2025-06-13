@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
+from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import Iterator
 
 from types_ import Attendees, MessageData
 
@@ -8,19 +8,22 @@ from types_ import Attendees, MessageData
 AUDIO_NOT_RECORDED = "録音された音声がありません。"
 
 
+AudioHandlerResult = AsyncGenerator[MessageData, None]
+
+
 class AudioHandler(ABC):
     encoding: str
 
     @abstractmethod
-    def __call__(self, attendees: Attendees) -> Iterator[MessageData]:
-        pass
+    async def __call__(self, attendees: Attendees) -> AudioHandlerResult:
+        yield  # type: ignore[return]
 
 
 class AudioHandlerFromCLI(ABC):
     @abstractmethod
-    def __call__(
+    async def __call__(
         self,
         mixed_audio_path: Path,
         context_path: Path,
-    ) -> Iterator[MessageData]:
-        pass
+    ) -> AudioHandlerResult:
+        yield  # type: ignore[return]

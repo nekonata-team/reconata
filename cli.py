@@ -57,7 +57,7 @@ def on_ready_send_messages_to_channel(bot: discord.Bot, channel_id: int):
             return
         context = MessageContext(channel=channel)
         try:
-            for msg in messages:
+            async for msg in messages:
                 await msg.effect(context)
         except Exception as e:
             print(f"送信中にエラー: {e}")

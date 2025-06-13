@@ -1,5 +1,5 @@
 {
-    "name": "Discord Recording Bot DevContainer",
+    "name": "reconata",
     "dockerComposeFile": [
         "../docker-compose.yml"
     ],

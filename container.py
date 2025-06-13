@@ -2,12 +2,12 @@ from pathlib import Path
 
 from dependency_injector import containers, providers
 from dotenv import load_dotenv
-from post_process.github_push import GitHubPushPostProcess
-from summarizer.gemini import GeminiSummarizer
-from summarizer.prompt_provider.formatted_markdown import (
+from nekomeeta.post_process.github_push import GitHubPushPostProcess
+from nekomeeta.summarizer.gemini import GeminiSummarizer
+from nekomeeta.summarizer.prompt_provider.formatted_markdown import (
     FormattedMarkdownSummarizePromptProvider,
 )
-from transcriber.faster_whisper import FasterWhisperTranscriber
+from nekomeeta.transcriber.faster_whisper import FasterWhisperTranscriber
 
 from handler.minute import MinuteAudioHandler, MinuteAudioHandlerFromCLI
 from handler.save import SaveToFolderAudioHandler
@@ -24,6 +24,7 @@ class Container(containers.DeclarativeContainer):
         FasterWhisperTranscriber,
         model_size=config.model_size,
         beam_size=config.beam_size,
+        hotwords="nekoanta",
     )
     summarizer = providers.Singleton(
         GeminiSummarizer,

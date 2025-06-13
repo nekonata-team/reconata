@@ -3,7 +3,7 @@ from logging import getLogger
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from input_provider.context import NekonataContext
+from nekomeeta.input_provider.context import NekonataContext
 from pydub import AudioSegment
 
 from handler.feature.path_builder import PathBuilder
@@ -85,6 +85,5 @@ class AttendeesHandler:
                 for id in self.attendees.keys()
             ]
         )
-        notes_joined = "\n".join(NekonataContext.notes)
         today_str = datetime.now(_TZ).strftime("%Y年%m月%d日")
-        return f"録音日: {today_str}\n参加者: {participant_names}\n補足: {notes_joined}"
+        return f"録音日: {today_str}\n参加者: {participant_names}\n補足: {NekonataContext.note}"

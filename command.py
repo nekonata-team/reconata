@@ -1,5 +1,3 @@
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from io import BytesIO
 from typing import cast
@@ -136,10 +134,8 @@ def configure() -> discord.Bot:
 
         context = MessageContext(channel=channel)
 
-        loop = asyncio.get_event_loop()
-        with ThreadPoolExecutor() as executor:
-            for data in await loop.run_in_executor(executor, audio_handler, attendees):
-                await data.effect(context)
+        async for data in audio_handler(attendees):
+            await data.effect(context)
         # clean up
         del meetings[channel.guild.id]
 

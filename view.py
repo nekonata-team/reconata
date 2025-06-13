@@ -1,5 +1,5 @@
 import discord
-from post_process.post_process import PostProcess
+from nekomeeta.post_process.post_process import PostProcess
 
 
 class CommitView(discord.ui.View):

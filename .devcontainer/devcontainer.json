@@ -1,11 +1,6 @@
 {
     "name": "reconata",
-    "dockerComposeFile": [
-        "../docker-compose.yml"
-    ],
-    "runServices": [
-        "dev"
-    ],
+    "dockerComposeFile": "../docker-compose.dev.yml",
     "service": "dev",
     "workspaceFolder": "/app",
     "customizations": {
@@ -24,6 +19,5 @@
                 "ms-azuretools.vscode-docker"
             ]
         }
-    },
-    "postCreateCommand": "pip install -r requirements.txt || true"
+    }
 }

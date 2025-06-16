@@ -10,29 +10,9 @@ services:
       - .env
     volumes:
       - .:/app
+      - ${HOME}/.huggingface:/root/.cache/huggingface
     working_dir: /app
     command: python3.11 main.py
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [ gpu ]
-
-  dev:
-    build:
-      context: .
-      dockerfile: Dockerfile.gpu
-      args:
-        GITHUB_PAT: ${GITHUB_PAT}
-    container_name: discord-recording-bot-dev-gpu
-    env_file:
-      - .env
-    volumes:
-      - .:/app
-    working_dir: /app
-    tty: true
     deploy:
       resources:
         reservations:

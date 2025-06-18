@@ -3,6 +3,7 @@ from pathlib import Path
 from dependency_injector import containers, providers
 from dotenv import load_dotenv
 from nekomeeta.post_process.github_push import GitHubPusher
+from nekomeeta.summarizer.formatter.mdformat import MdFormatSummaryFormatter
 from nekomeeta.summarizer.gemini import GeminiSummarizer
 from nekomeeta.summarizer.prompt_provider.obsidian import (
     ObsidianSummarizePromptProvider,
@@ -31,6 +32,7 @@ class Container(containers.DeclarativeContainer):
         api_key=config.api_key,
         summarize_prompt_provider=prompt_provider,
     )
+    formatter = providers.Singleton(MdFormatSummaryFormatter)
     pusher = providers.Singleton(
         GitHubPusher,
         repo_url=config.repo_url,
@@ -44,6 +46,7 @@ class Container(containers.DeclarativeContainer):
             transcriber=transcriber,
             summarizer=summarizer,
             summarize_prompt_provider=prompt_provider,
+            summary_formatter=formatter,
             pusher=pusher,
         ),
         transcription=providers.Singleton(
@@ -62,6 +65,7 @@ class Container(containers.DeclarativeContainer):
         transcriber=transcriber,
         summarizer=summarizer,
         summarize_prompt_provider=prompt_provider,
+        summary_formatter=formatter,
         pusher=pusher,
     )
 

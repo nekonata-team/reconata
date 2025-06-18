@@ -5,6 +5,7 @@ from typing import cast
 
 import discord
 from nekomeeta.post_process.github_push import GitHubPusher
+from nekomeeta.summarizer.formatter.summary_formatter import SummaryFormatter
 from nekomeeta.summarizer.prompt_provider.summarize_prompt_provider import (
     ContextualSummarizePromptProvider,
 )
@@ -39,12 +40,14 @@ class MinuteAudioHandler(AudioHandler):
         transcriber: Transcriber | IterableTranscriber,
         summarizer: Summarizer,
         summarize_prompt_provider: ContextualSummarizePromptProvider,
+        summary_formatter: SummaryFormatter,
         pusher: GitHubPusher,
     ):
         self.dir = dir
         self.transcriber = transcriber
         self.summarizer = summarizer
         self.summarize_prompt_provider = summarize_prompt_provider
+        self.summary_formatter = summary_formatter
         self.pusher = pusher
 
     async def __call__(self, attendees: Attendees) -> AudioHandlerResult:
@@ -143,7 +146,7 @@ class MinuteAudioHandler(AudioHandler):
 
         yield _create_final_send_data(
             transcription_path,
-            summary,
+            self.summary_formatter.format(summary),
             self.pusher,
         )
 
@@ -220,12 +223,14 @@ class MinuteAudioHandlerFromCLI(AudioHandlerFromCLI):
         transcriber: Transcriber,
         summarizer: Summarizer,
         summarize_prompt_provider: ContextualSummarizePromptProvider,
+        summary_formatter: SummaryFormatter,
         pusher: GitHubPusher,
     ):
         self.dir = dir
         self.transcriber = transcriber
         self.summarizer = summarizer
         self.summarize_prompt_provider = summarize_prompt_provider
+        self.summary_formatter = summary_formatter
         self.pusher = pusher
 
     async def __call__(
@@ -262,7 +267,9 @@ class MinuteAudioHandlerFromCLI(AudioHandlerFromCLI):
         summary_path = path_builder.summary()
         self.summarize_prompt_provider.additional_context = context_path.read_text()
 
-        summary = self.summarizer.generate_meeting_notes(transcription)
+        summary = self.summary_formatter.format(
+            self.summarizer.generate_meeting_notes(transcription)
+        )
         with open(summary_path, "w", encoding="utf-8") as f:
             f.write(summary)
 

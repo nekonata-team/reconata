@@ -2,10 +2,10 @@ from pathlib import Path
 
 from dependency_injector import containers, providers
 from dotenv import load_dotenv
-from nekomeeta.post_process.github_push import GitHubPushPostProcess
+from nekomeeta.post_process.github_push import GitHubPusher
 from nekomeeta.summarizer.gemini import GeminiSummarizer
-from nekomeeta.summarizer.prompt_provider.formatted_markdown import (
-    FormattedMarkdownSummarizePromptProvider,
+from nekomeeta.summarizer.prompt_provider.obsidian import (
+    ObsidianSummarizePromptProvider,
 )
 from nekomeeta.transcriber.faster_whisper import FasterWhisperTranscriber
 
@@ -19,7 +19,7 @@ load_dotenv()
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
 
-    prompt_provider = providers.Singleton(FormattedMarkdownSummarizePromptProvider)
+    prompt_provider = providers.Singleton(ObsidianSummarizePromptProvider)
     transcriber = providers.Singleton(
         FasterWhisperTranscriber,
         model_size=config.model_size,
@@ -31,9 +31,10 @@ class Container(containers.DeclarativeContainer):
         api_key=config.api_key,
         summarize_prompt_provider=prompt_provider,
     )
-    post_process = providers.Singleton(
-        GitHubPushPostProcess,
+    pusher = providers.Singleton(
+        GitHubPusher,
         repo_url=config.repo_url,
+        # local_repo_path=Path("./local.dev"),
     )
     audio_handler = providers.Selector(
         config.mode,
@@ -43,7 +44,7 @@ class Container(containers.DeclarativeContainer):
             transcriber=transcriber,
             summarizer=summarizer,
             summarize_prompt_provider=prompt_provider,
-            post_process=post_process,
+            pusher=pusher,
         ),
         transcription=providers.Singleton(
             TranscriptionAudioHandler,
@@ -61,7 +62,7 @@ class Container(containers.DeclarativeContainer):
         transcriber=transcriber,
         summarizer=summarizer,
         summarize_prompt_provider=prompt_provider,
-        post_process=post_process,
+        pusher=pusher,
     )
 
 

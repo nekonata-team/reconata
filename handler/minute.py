@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import cast
 
 import discord
-from nekomeeta.post_process.post_process import PostProcess
+from nekomeeta.post_process.github_push import GitHubPusher
 from nekomeeta.summarizer.prompt_provider.summarize_prompt_provider import (
     ContextualSummarizePromptProvider,
 )
@@ -39,13 +39,13 @@ class MinuteAudioHandler(AudioHandler):
         transcriber: Transcriber | IterableTranscriber,
         summarizer: Summarizer,
         summarize_prompt_provider: ContextualSummarizePromptProvider,
-        post_process: PostProcess,
+        pusher: GitHubPusher,
     ):
         self.dir = dir
         self.transcriber = transcriber
         self.summarizer = summarizer
         self.summarize_prompt_provider = summarize_prompt_provider
-        self.post_process = post_process
+        self.pusher = pusher
 
     async def __call__(self, attendees: Attendees) -> AudioHandlerResult:
         today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -141,16 +141,10 @@ class MinuteAudioHandler(AudioHandler):
             yield SendThreadData(content=f"要約に失敗しました: {e}")
             return
 
-        embed = discord.Embed(
-            title="要約",
-            description=summary,
-            timestamp=datetime.now(),
-        )
-        view = CommitView(post_process=self.post_process)
-        yield SendData(
-            files=[discord.File(transcription_path, "transcription.txt")],
-            embed=embed,
-            view=view,
+        yield _create_final_send_data(
+            transcription_path,
+            summary,
+            self.pusher,
         )
 
     def _transcribe_and_save(
@@ -226,13 +220,13 @@ class MinuteAudioHandlerFromCLI(AudioHandlerFromCLI):
         transcriber: Transcriber,
         summarizer: Summarizer,
         summarize_prompt_provider: ContextualSummarizePromptProvider,
-        post_process: PostProcess,
+        pusher: GitHubPusher,
     ):
         self.dir = dir
         self.transcriber = transcriber
         self.summarizer = summarizer
         self.summarize_prompt_provider = summarize_prompt_provider
-        self.post_process = post_process
+        self.pusher = pusher
 
     async def __call__(
         self,
@@ -274,17 +268,26 @@ class MinuteAudioHandlerFromCLI(AudioHandlerFromCLI):
 
         logger.info("Summary completed.")
 
-        embed = discord.Embed(
-            title="要約",
-            description=summary,
-            timestamp=datetime.now(),
-        )
-        view = CommitView(post_process=self.post_process)
+        yield _create_final_send_data(transcription_path, summary, self.pusher)
 
-        logger.info("Embed created.")
 
-        yield SendData(
-            files=[discord.File(transcription_path, "transcription.txt")],
-            embed=embed,
-            view=view,
-        )
+def _create_final_send_data(
+    transcription_path: Path,
+    summary: str,
+    pusher: GitHubPusher,
+) -> SendData:
+    now = datetime.now()
+    embed = discord.Embed(
+        title=now.strftime("%Y年%m月%d日"),
+        description=summary,
+        timestamp=now,
+    )
+    view = CommitView(pusher=pusher)
+
+    logger.info("Embed created.")
+
+    return SendData(
+        files=[discord.File(transcription_path, "transcription.txt")],
+        embed=embed,
+        view=view,
+    )

@@ -82,7 +82,7 @@ def configure() -> discord.Bot:
                 title="テストメッセージ",
                 description="これはテストメッセージです。",
             ),
-            view=CommitView(container.post_process()),
+            view=CommitView(container.pusher()),
             files=[
                 discord.File(
                     file_obj,
@@ -111,10 +111,8 @@ def configure() -> discord.Bot:
 
         summarizer_class = type(container.summarizer()).__name__
         transcriber_class = type(container.transcriber()).__name__
-        post_process_class = type(container.post_process()).__name__
         embed.add_field(name="Summarizer", value=summarizer_class)
         embed.add_field(name="Transcriber", value=transcriber_class)
-        embed.add_field(name="PostProcess", value=post_process_class)
         embed.add_field(name="Mode", value=container.config.mode())
 
         await ctx.respond(embed=embed)

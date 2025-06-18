@@ -1,11 +1,11 @@
 import discord
-from nekomeeta.post_process.post_process import PostProcess
+from nekomeeta.post_process.github_push import GitHubPusher
 
 
 class CommitView(discord.ui.View):
-    def __init__(self, post_process: PostProcess):
+    def __init__(self, pusher: GitHubPusher):
         super().__init__(timeout=None)
-        self.post_process = post_process
+        self.pusher = pusher
 
     @discord.ui.button(label="コミット", style=discord.ButtonStyle.primary, emoji="🚀")
     async def commit_button_callback(self, button, interaction: discord.Interaction):
@@ -16,7 +16,7 @@ class CommitView(discord.ui.View):
             return
         await interaction.response.send_message(
             "コミットを実行しますか？",
-            view=ConfirmView(self.post_process, message),
+            view=ConfirmView(self.pusher, message),
             ephemeral=True,
         )
 
@@ -38,11 +38,11 @@ class CommitView(discord.ui.View):
 class ConfirmView(discord.ui.View):
     def __init__(
         self,
-        post_process: PostProcess,
+        pusher: GitHubPusher,
         target_message: discord.Message,
     ):
         super().__init__()
-        self.post_process = post_process
+        self.pusher = pusher
         self.target_message = target_message
 
     @discord.ui.button(label="はい", style=discord.ButtonStyle.success)
@@ -58,12 +58,15 @@ class ConfirmView(discord.ui.View):
         transcription_bytes = await message.attachments[0].read()
         transcription = transcription_bytes.decode("utf-8")
         summary = message.embeds[0].description
+        title = message.embeds[0].title
+
         if not transcription or not summary:
             await interaction.followup.send(
                 "文字起こしまたは要約が空です。", ephemeral=True
             )
             return
-        self.post_process.run(transcription, summary)
+
+        self.pusher(transcription, summary, title)
         # ボタンを削除
         await message.edit(view=None)
         await interaction.followup.send("コミットが成功しました。", ephemeral=True)

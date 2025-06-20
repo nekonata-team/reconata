@@ -4,20 +4,14 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from nekomeeta.input_provider.context import NekonataContext
-from pydub import AudioSegment
 
+from handler.feature.mixer import FFmpegMixer
 from handler.feature.path_builder import PathBuilder
 from types_ import Attendees
 
 _TZ = ZoneInfo("Asia/Tokyo")
 
 logger = getLogger(__name__)
-
-
-class NoAudioToMixError(Exception):
-    """ミックスする音声がない場合の例外"""
-
-    pass
 
 
 class AttendeesHandler:
@@ -29,6 +23,7 @@ class AttendeesHandler:
         self.attendees = attendees
         session_root = dir / datetime.now().strftime("%Y%m%d_%H%M%S")
         self.path_builder = PathBuilder(session_root, encoding)
+        self.mixer = FFmpegMixer()
 
         logger.info(
             f"AttendeesHandler initialized with {len(attendees)} attendees, "
@@ -56,21 +51,7 @@ class AttendeesHandler:
 
     def mix(self, files: list[Path]) -> Path:
         output_file = self.path_builder.mixed_audio()
-        segments: list[AudioSegment] = [
-            AudioSegment.from_file(file)
-            for file in files
-            if file.exists() and file.is_file()
-        ]
-
-        if not segments:
-            raise NoAudioToMixError("ミックスする音声がありません。")
-
-        segments = sorted(segments, key=lambda seg: seg.duration_seconds, reverse=True)
-        mixed = segments[0]
-        for seg in segments[1:]:
-            mixed = mixed.overlay(seg)
-
-        mixed.export(output_file)
+        self.mixer.mix(files, output_file)
         return output_file
 
     def get_attendees_ids_string(self) -> str:

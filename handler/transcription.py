@@ -18,7 +18,7 @@ from .audio_handler import (
     AudioHandler,
     AudioHandlerResult,
 )
-from .feature.attendees_handler import AttendeesHandler, NoAudioToMixError
+from .feature.attendees_handler import AttendeesHandler
 
 
 class TranscriptionAudioHandler(AudioHandler):
@@ -59,13 +59,6 @@ class TranscriptionAudioHandler(AudioHandler):
                     description="ミックスされた音声ファイルを保存しました。",
                 )
             )
-        except NoAudioToMixError as e:
-            yield SendThreadData(
-                embed=discord.Embed(
-                    description=str(e),
-                )
-            )
-            return
         except Exception as e:
             yield SendThreadData(
                 embed=discord.Embed(

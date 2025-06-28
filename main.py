@@ -4,7 +4,7 @@ from command import configure
 from container import container
 from logging_config import load_logging_config
 
-load_logging_config()
+load_logging_config(container.config.log_level())
 
 logger = logging.getLogger(__name__)
 

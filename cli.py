@@ -66,7 +66,7 @@ def on_ready_send_messages_to_channel(bot: discord.Bot, channel_id: int):
 if __name__ == "__main__":
     from logging_config import load_logging_config
 
-    load_logging_config()
+    load_logging_config(container.config.log_level())
 
     args = parse_args()
     mixed_audio_path = args.mixed_audio_path

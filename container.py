@@ -25,6 +25,7 @@ class Container(containers.DeclarativeContainer):
         FasterWhisperTranscriber,
         model_size=config.model_size,
         beam_size=config.beam_size,
+        batch_size=config.batch_size,
         hotwords="nekoanta",
     )
     summarizer = providers.Singleton(
@@ -75,4 +76,5 @@ container.config.repo_url.from_env("GITHUB_REPO_URL", required=True)
 container.config.api_key.from_env("GOOGLE_API_KEY", required=True)
 container.config.model_size.from_env("MODEL_SIZE", default="small")
 container.config.beam_size.from_env("BEAM_SIZE", default=5, as_=int)
+container.config.batch_size.from_env("BATCH_SIZE", default=8, as_=int)
 container.config.discord_bot_token.from_env("DISCORD_BOT_TOKEN", required=True)

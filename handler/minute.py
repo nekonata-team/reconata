@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import cast
 
 import discord
-from nekomeeta.post_process.github_push import GitHubPusher
 from nekomeeta.summarizer.formatter.summary_formatter import SummaryFormatter
 from nekomeeta.summarizer.prompt_provider.summarize_prompt_provider import (
     ContextualSummarizePromptProvider,
@@ -20,7 +19,7 @@ from types_ import (
     SendData,
     SendThreadData,
 )
-from view import CommitView
+from view_builder import ViewBuilder
 
 from .audio_handler import (
     AUDIO_NOT_RECORDED,
@@ -42,14 +41,14 @@ class MinuteAudioHandler(AudioHandler):
         summarizer: Summarizer,
         summarize_prompt_provider: ContextualSummarizePromptProvider,
         summary_formatter: SummaryFormatter,
-        pusher: GitHubPusher,
+        view_builder: ViewBuilder,
     ):
         self.dir = dir
         self.transcriber = transcriber
         self.summarizer = summarizer
         self.summarize_prompt_provider = summarize_prompt_provider
         self.summary_formatter = summary_formatter
-        self.pusher = pusher
+        self.view_builder = view_builder
 
     async def __call__(self, attendees: Attendees) -> AudioHandlerResult:
         today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -141,7 +140,7 @@ class MinuteAudioHandler(AudioHandler):
         yield _create_final_send_data(
             transcription_path,
             self.summary_formatter.format(summary),
-            self.pusher,
+            self.view_builder,
         )
 
     def _transcribe_and_save(
@@ -218,14 +217,14 @@ class MinuteAudioHandlerFromCLI(AudioHandlerFromCLI):
         summarizer: Summarizer,
         summarize_prompt_provider: ContextualSummarizePromptProvider,
         summary_formatter: SummaryFormatter,
-        pusher: GitHubPusher,
+        view_builder: ViewBuilder,
     ):
         self.dir = dir
         self.transcriber = transcriber
         self.summarizer = summarizer
         self.summarize_prompt_provider = summarize_prompt_provider
         self.summary_formatter = summary_formatter
-        self.pusher = pusher
+        self.view_builder = view_builder
 
     async def __call__(
         self,
@@ -269,13 +268,13 @@ class MinuteAudioHandlerFromCLI(AudioHandlerFromCLI):
 
         logger.info("Summary completed.")
 
-        yield _create_final_send_data(transcription_path, summary, self.pusher)
+        yield _create_final_send_data(transcription_path, summary, self.view_builder)
 
 
 def _create_final_send_data(
     transcription_path: Path,
     summary: str,
-    pusher: GitHubPusher,
+    view_builder: ViewBuilder,
 ) -> SendData:
     now = datetime.now()
     embed = discord.Embed(
@@ -283,7 +282,7 @@ def _create_final_send_data(
         description=summary,
         timestamp=now,
     )
-    view = CommitView(pusher=pusher)
+    view = view_builder.create_view()
 
     logger.info("Embed created.")
 

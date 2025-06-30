@@ -122,7 +122,6 @@ def configure() -> discord.Bot:
         transcriber_class = type(container.transcriber()).__name__
         embed.add_field(name="Summarizer", value=summarizer_class)
         embed.add_field(name="Transcriber", value=transcriber_class)
-        embed.add_field(name="Mode", value=container.config.mode())
 
         await ctx.respond(embed=embed)
 

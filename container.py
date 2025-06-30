@@ -13,10 +13,11 @@ from nekomeeta.summarizer.prompt_provider.structured_markdown import (
 )
 from nekomeeta.transcriber.faster_whisper import FasterWhisperTranscriber
 
+from enums import Mode, PromptKey, ViewType
 from handler.minute import MinuteAudioHandler, MinuteAudioHandlerFromCLI
 from handler.save import SaveToFolderAudioHandler
 from handler.transcription import TranscriptionAudioHandler
-from types_ import Mode, PromptKey
+from view_builder import CommitViewBuilder, EditViewBuilder
 
 load_dotenv()
 
@@ -51,6 +52,18 @@ class Container(containers.DeclarativeContainer):
         repo_url=config.repo_url,
         # local_repo_path=Path("./local.dev"),
     )
+    view_builder = providers.Selector(
+        config.view_type,
+        **{
+            ViewType.COMMIT: providers.Singleton(
+                CommitViewBuilder,
+                pusher=pusher,
+            ),
+            ViewType.EDIT: providers.Singleton(
+                EditViewBuilder,
+            ),
+        },
+    )
     audio_handler = providers.Selector(
         config.mode,
         **{
@@ -61,7 +74,7 @@ class Container(containers.DeclarativeContainer):
                 summarizer=summarizer,
                 summarize_prompt_provider=prompt_provider,
                 summary_formatter=formatter,
-                pusher=pusher,
+                view_builder=view_builder,
             ),
             Mode.TRANSCRIPTION: providers.Singleton(
                 TranscriptionAudioHandler,
@@ -81,7 +94,7 @@ class Container(containers.DeclarativeContainer):
         summarizer=summarizer,
         summarize_prompt_provider=prompt_provider,
         summary_formatter=formatter,
-        pusher=pusher,
+        view_builder=view_builder,
     )
 
 
@@ -94,3 +107,4 @@ container.config.batch_size.from_env("BATCH_SIZE", default=8, as_=int)
 container.config.discord_bot_token.from_env("DISCORD_BOT_TOKEN", required=True)
 container.config.log_level.from_env("LOG_LEVEL", default="INFO", as_=str)
 container.config.summarize_prompt_key.from_value(PromptKey.DEFAULT)
+container.config.view_type.from_value(ViewType.COMMIT)

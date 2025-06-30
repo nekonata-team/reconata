@@ -1,7 +1,6 @@
 import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from enum import StrEnum
 from logging import getLogger
 from pathlib import Path
 
@@ -9,21 +8,6 @@ import discord
 import discord.types.threads
 
 logger = getLogger(__name__)
-
-
-class Mode(StrEnum):
-    """録音モード"""
-
-    MINUTE = "minute"
-    TRANSCRIPTION = "transcription"
-    SAVE = "save"
-
-
-class PromptKey(StrEnum):
-    """プロンプトキー"""
-
-    DEFAULT = "default"
-    OBSIDIAN = "obsidian"
 
 
 @dataclass

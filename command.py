@@ -4,14 +4,13 @@ from typing import cast
 import discord
 
 from container import container
+from enums import Mode, PromptKey, ViewType
 from file_sink import FileSink
 from handler.audio_handler import AudioHandler
 from types_ import (
     AttendeeData,
     Meeting,
     MessageContext,
-    Mode,
-    PromptKey,
     SendData,
 )
 from view import CommitView
@@ -55,15 +54,27 @@ def configure() -> discord.Bot:
         ctx: discord.ApplicationContext,
         prompt_key=discord.Option(
             str,
-            description="使用するプロンプトキー",
+            description="使用するプロンプト",
             default=PromptKey.DEFAULT,
             choices=[
                 discord.OptionChoice(name="デフォルト", value=PromptKey.DEFAULT),
                 discord.OptionChoice(name="Obsidian", value=PromptKey.OBSIDIAN),
             ],
         ),
+        view_type=discord.Option(
+            str,
+            description="付加するView（ボタン）",
+            default=ViewType.EDIT,
+            choices=[
+                discord.OptionChoice(name="編集ボタン", value=ViewType.EDIT),
+                discord.OptionChoice(
+                    name="コミットボタン + 編集ボタン", value=ViewType.COMMIT
+                ),
+            ],
+        ),
     ):
         container.config.summarize_prompt_key.override(prompt_key)
+        container.config.view_type.override(view_type)
         await stop_recording(ctx, Mode.MINUTE)
 
     @stop.command(description="文字起こしモードで録音を停止します")

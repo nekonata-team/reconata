@@ -8,11 +8,15 @@ from nekomeeta.summarizer.gemini import GeminiSummarizer
 from nekomeeta.summarizer.prompt_provider.obsidian import (
     ObsidianSummarizePromptProvider,
 )
+from nekomeeta.summarizer.prompt_provider.structured_markdown import (
+    StructuredMarkdownSummarizePromptProvider,
+)
 from nekomeeta.transcriber.faster_whisper import FasterWhisperTranscriber
 
 from handler.minute import MinuteAudioHandler, MinuteAudioHandlerFromCLI
 from handler.save import SaveToFolderAudioHandler
 from handler.transcription import TranscriptionAudioHandler
+from types_ import Mode, PromptKey
 
 load_dotenv()
 
@@ -20,13 +24,21 @@ load_dotenv()
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
 
-    prompt_provider = providers.Singleton(ObsidianSummarizePromptProvider)
+    prompt_provider = providers.Selector(
+        config.summarize_prompt_key,
+        **{
+            PromptKey.DEFAULT: providers.Singleton(
+                StructuredMarkdownSummarizePromptProvider
+            ),
+            PromptKey.OBSIDIAN: providers.Singleton(ObsidianSummarizePromptProvider),
+        },
+    )
     transcriber = providers.Singleton(
         FasterWhisperTranscriber,
         model_size=config.model_size,
         beam_size=config.beam_size,
         batch_size=config.batch_size,
-        hotwords="nekoanta",
+        hotwords="nekonata",
     )
     summarizer = providers.Singleton(
         GeminiSummarizer,
@@ -41,24 +53,26 @@ class Container(containers.DeclarativeContainer):
     )
     audio_handler = providers.Selector(
         config.mode,
-        minute=providers.Singleton(
-            MinuteAudioHandler,
-            dir=Path("./data"),
-            transcriber=transcriber,
-            summarizer=summarizer,
-            summarize_prompt_provider=prompt_provider,
-            summary_formatter=formatter,
-            pusher=pusher,
-        ),
-        transcription=providers.Singleton(
-            TranscriptionAudioHandler,
-            dir=Path("./data"),
-            transcriber=transcriber,
-        ),
-        save=providers.Singleton(
-            SaveToFolderAudioHandler,
-            dir=Path("./data"),
-        ),
+        **{
+            Mode.MINUTE: providers.Singleton(
+                MinuteAudioHandler,
+                dir=Path("./data"),
+                transcriber=transcriber,
+                summarizer=summarizer,
+                summarize_prompt_provider=prompt_provider,
+                summary_formatter=formatter,
+                pusher=pusher,
+            ),
+            Mode.TRANSCRIPTION: providers.Singleton(
+                TranscriptionAudioHandler,
+                dir=Path("./data"),
+                transcriber=transcriber,
+            ),
+            Mode.SAVE: providers.Singleton(
+                SaveToFolderAudioHandler,
+                dir=Path("./data"),
+            ),
+        },
     )
     audio_handler_from_cli = providers.Singleton(
         MinuteAudioHandlerFromCLI,
@@ -79,3 +93,4 @@ container.config.beam_size.from_env("BEAM_SIZE", default=5, as_=int)
 container.config.batch_size.from_env("BATCH_SIZE", default=8, as_=int)
 container.config.discord_bot_token.from_env("DISCORD_BOT_TOKEN", required=True)
 container.config.log_level.from_env("LOG_LEVEL", default="INFO", as_=str)
+container.config.summarize_prompt_key.from_value(PromptKey.DEFAULT)

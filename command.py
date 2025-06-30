@@ -1,4 +1,3 @@
-from enum import Enum
 from io import BytesIO
 from typing import cast
 
@@ -11,6 +10,8 @@ from types_ import (
     AttendeeData,
     Meeting,
     MessageContext,
+    Mode,
+    PromptKey,
     SendData,
 )
 from view import CommitView
@@ -18,11 +19,6 @@ from view import CommitView
 
 def configure() -> discord.Bot:
     bot = discord.Bot()
-
-    class AudioHandlerMode(Enum):
-        MINUTE = "minute"
-        TRANSCRIPTION = "transcription"
-        SAVE = "save"
 
     meetings: dict[int, Meeting] = {}
 
@@ -52,20 +48,33 @@ def configure() -> discord.Bot:
             )
             await ctx.respond("録音を開始しました。")
 
-    @bot.command(description="録音を停止します。録音中のみ有効です。")
-    async def stop(
-        ctx: discord.ApplicationContext,
-        mode: discord.Option(AudioHandlerMode, "録音モード"),
-    ):
-        await ctx.defer()
+    stop = discord.SlashCommandGroup("stop", "録音を停止します")
 
-        container.config.mode.override(mode.value)
-        meeting = meetings.get(ctx.guild.id)
-        if meeting is not None:
-            meeting.voice_client.stop_recording()
-            await ctx.delete()
-        else:
-            await ctx.respond("録音は開始されていません。")
+    @stop.command(description="議事録モードで録音を停止します")
+    async def minute(
+        ctx: discord.ApplicationContext,
+        prompt_key=discord.Option(
+            str,
+            description="使用するプロンプトキー",
+            default=PromptKey.DEFAULT,
+            choices=[
+                discord.OptionChoice(name="デフォルト", value=PromptKey.DEFAULT),
+                discord.OptionChoice(name="Obsidian", value=PromptKey.OBSIDIAN),
+            ],
+        ),
+    ):
+        container.config.summarize_prompt_key.override(prompt_key)
+        await stop_recording(ctx, Mode.MINUTE)
+
+    @stop.command(description="文字起こしモードで録音を停止します")
+    async def transcription(ctx: discord.ApplicationContext):
+        await stop_recording(ctx, Mode.TRANSCRIPTION)
+
+    @stop.command(description="保存モードで録音を停止します")
+    async def save(ctx: discord.ApplicationContext):
+        await stop_recording(ctx, Mode.SAVE)
+
+    bot.add_application_command(stop)
 
     @bot.command(description="テストメッセージとテストファイルを送信します。")
     async def test(ctx: discord.ApplicationContext):
@@ -116,6 +125,18 @@ def configure() -> discord.Bot:
         embed.add_field(name="Mode", value=container.config.mode())
 
         await ctx.respond(embed=embed)
+
+    async def stop_recording(ctx: discord.ApplicationContext, mode: Mode):
+        """録音停止の共通処理"""
+        await ctx.defer()
+
+        container.config.mode.override(mode)
+        meeting = meetings.get(ctx.guild.id)
+        if meeting is not None:
+            meeting.voice_client.stop_recording()
+            await ctx.delete()
+        else:
+            await ctx.respond("録音は開始されていません。")
 
     async def on_finish_recording(sink: FileSink, channel: discord.TextChannel):
         await sink.vc.disconnect()

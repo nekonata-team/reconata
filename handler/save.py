@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 from types_ import Attendees, SendData
@@ -20,7 +21,7 @@ class SaveToFolderAudioHandler(AudioHandler):
             return
 
         handler = AttendeesHandler(attendees, self.dir, self.encoding)
-        handler.save_all_audio()
+        await asyncio.to_thread(handler.save_all_audio)
 
         content = f"録音ファイルの保存が完了しました。\n\n参加者:\n{handler.get_attendees_ids_string()}"
         yield SendData(content=content)

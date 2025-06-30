@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from logging import getLogger
 from pathlib import Path
@@ -77,10 +78,10 @@ class MinuteAudioHandler(AudioHandler):
             embed=discord.Embed(description="録音ファイルを処理しています。")
         )
 
-        files = handler.save_all_audio()
+        files = await asyncio.to_thread(handler.save_all_audio)
 
         try:
-            mixed_file_path = handler.mix(files)
+            mixed_file_path = await asyncio.to_thread(handler.mix, files)
             yield SendThreadData(
                 embed=discord.Embed(
                     description="ミックスされた音声ファイルを保存しました。",

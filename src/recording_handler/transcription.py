@@ -6,7 +6,7 @@ from typing import cast
 import discord
 from nekomeeta.transcriber.transcriber import IterableTranscriber, Transcriber
 
-from src.bot.type import Attendees
+from src.bot.attendee import Attendees
 
 from .common import create_path_builder, get_attendees_ids_string, mix, save_all_audio
 from .message_data import (
@@ -25,8 +25,8 @@ from .recording_handler import (
 class TranscriptionAudioHandler(RecordingHandler):
     def __init__(
         self,
-        dir: Path,
         transcriber: Transcriber,
+        dir: Path = Path("./data"),
     ):
         self.dir = dir
         self.transcriber = transcriber

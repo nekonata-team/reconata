@@ -22,6 +22,15 @@ class ParametersModal(discord.ui.Modal):
         )
         self.add_item(self.prompt_key_input)
 
+        self.hotwords_input = discord.ui.InputText(
+            label="ホットワード",
+            placeholder="文字起こし時の固有名詞などの精度向上に役立つ単語",
+            value=initial_params.hotwords or "",
+            max_length=100,
+            required=False,
+        )
+        self.add_item(self.hotwords_input)
+
         self.additional_context_input = discord.ui.InputText(
             label="追加コンテキスト",
             style=discord.InputTextStyle.long,
@@ -68,6 +77,7 @@ class ParametersModal(discord.ui.Modal):
                     )
                     return
 
+            hotwords = (self.hotwords_input.value or "").strip() or None
             additional_context = (
                 self.additional_context_input.value or ""
             ).strip() or None
@@ -84,6 +94,7 @@ class ParametersModal(discord.ui.Modal):
 
             new_params = Parameters(
                 prompt_key=prompt_key,
+                hotwords=hotwords,
                 additional_context=additional_context,
                 github_repo_url=github_repo_url,
                 user_names=user_names,

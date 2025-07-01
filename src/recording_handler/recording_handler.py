@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator
 
-from src.bot.type import Attendees
+from src.bot.attendee import Attendees
 
 from .message_data import MessageData
 

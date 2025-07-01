@@ -34,4 +34,3 @@ GPU環境でのテストをしたい場合は、`devcontainer.json`の`dockerCom
 
 - Python 3.11で開発
   - 一部ライブラリが3.12以降で非推奨になったため
-- 環境変数の`GITHUB_REPO_URL`は、プライベートリポジトリの場合、PATを組み込む

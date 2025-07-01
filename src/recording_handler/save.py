@@ -1,7 +1,7 @@
 import asyncio
 from pathlib import Path
 
-from src.bot.type import Attendees
+from src.bot.attendee import Attendees
 
 from .common import create_path_builder, get_attendees_ids_string, save_all_audio
 from .message_data import SendData
@@ -13,7 +13,10 @@ from .recording_handler import (
 
 
 class SaveToFolderRecordingHandler(RecordingHandler):
-    def __init__(self, dir: Path):
+    def __init__(
+        self,
+        dir: Path = Path("./data"),
+    ):
         self.dir = dir
 
     async def __call__(self, attendees: Attendees) -> AudioHandlerResult:

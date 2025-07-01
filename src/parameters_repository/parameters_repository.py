@@ -19,6 +19,7 @@ class Parameters(BaseModel):
     github_repo_url: str | None = Field(
         default=None, description="GitHubリポジトリのURL"
     )
+    hotwords: str | None = Field(default=None, description="文字起こし時のホットワード")
 
     model_config = {"frozen": True}
 

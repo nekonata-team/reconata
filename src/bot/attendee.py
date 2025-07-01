@@ -3,8 +3,6 @@ from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
 
-import discord
-
 logger = getLogger(__name__)
 
 
@@ -37,8 +35,3 @@ class AttendeeData:
 
 
 Attendees = dict[int, AttendeeData]
-
-
-@dataclass
-class Meeting:
-    voice_client: discord.VoiceClient

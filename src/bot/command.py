@@ -1,22 +1,33 @@
+from dataclasses import dataclass
 from logging import getLogger
 from typing import cast
 
 import discord
+from nekomeeta.post_process.github_push import GitHubPusher
+from nekomeeta.summarizer.formatter.mdformat import MdFormatSummaryFormatter
 
 from container import container
+from src.recording_handler.context_provider import ParametersBaseContextProvider
 from src.recording_handler.message_data import (
     MessageContext,
 )
+from src.recording_handler.minute import MinuteAudioHandler
 from src.recording_handler.recording_handler import RecordingHandler
+from src.recording_handler.save import SaveToFolderRecordingHandler
+from src.recording_handler.transcription import TranscriptionAudioHandler
+from src.ui.view_builder import CommitViewBuilder, EditViewBuilder
 
-from .enums import Mode, PromptKey, ViewType
+from .attendee import AttendeeData
+from .enums import Mode, PromptKey
 from .file_sink import FileSink
-from .type import (
-    AttendeeData,
-    Meeting,
-)
 
 logger = getLogger(__name__)
+
+
+@dataclass
+class Meeting:
+    voice_client: discord.VoiceClient
+    recording_handler: RecordingHandler | None = None
 
 
 bot = discord.Bot()
@@ -53,73 +64,25 @@ async def start(ctx: discord.ApplicationContext):
         await ctx.respond("録音を開始しました。")
 
 
-stop = discord.SlashCommandGroup("stop", "録音を停止します")
-
-
-@stop.command(description="議事録モードで録音を停止します")
-async def minute(
+@bot.command(description="録音を停止します")
+async def stop(
     ctx: discord.ApplicationContext,
-    prompt_key=discord.Option(
-        str,
-        description="使用するプロンプト",
-        default=PromptKey.DEFAULT,
-        choices=[
-            discord.OptionChoice(name="デフォルト", value=PromptKey.DEFAULT),
-            discord.OptionChoice(name="Obsidian", value=PromptKey.OBSIDIAN),
-        ],
-    ),
-    view_type=discord.Option(
-        str,
-        description="付加するView（ボタン）",
-        default=ViewType.EDIT,
-        choices=[
-            discord.OptionChoice(name="編集ボタン", value=ViewType.EDIT),
-            discord.OptionChoice(
-                name="コミットボタン + 編集ボタン", value=ViewType.COMMIT
-            ),
-        ],
+    mode=discord.Option(
+        Mode,
+        name="モード",
+        description="録音の処理モードを設定する事ができます",
+        default=Mode.MINUTE,
     ),
 ):
     await ctx.defer()
 
-    container.config.summarize_prompt_key.override(prompt_key)
-    container.config.view_type.override(view_type)
-    msg = stop_recording(ctx, Mode.MINUTE)
-    await ctx.respond(msg)
+    guild_id = ctx.guild.id
+    meeting = meetings.get(guild_id)
 
+    if meeting is None:
+        return "録音情報がありません。"
 
-@stop.command(description="文字起こしモードで録音を停止します")
-async def transcription(ctx: discord.ApplicationContext):
-    await ctx.defer()
-    msg = stop_recording(ctx, Mode.TRANSCRIPTION)
-    await ctx.respond(msg)
-
-
-@stop.command(description="保存モードで録音を停止します")
-async def save(ctx: discord.ApplicationContext):
-    await ctx.defer()
-    msg = stop_recording(ctx, Mode.SAVE)
-    await ctx.respond(msg)
-
-
-bot.add_application_command(stop)
-
-
-@bot.command(description="現在のパラメータや利用中のコンポーネント情報を表示します。")
-async def parameters(ctx: discord.ApplicationContext):
-    await ctx.defer()
-
-    from src.ui.view.edit_parameters import EditParametersView
-    from src.ui.embeds import create_parameters_embed
-
-    embed = create_parameters_embed(ctx.guild.id)
-    view = EditParametersView(ctx.guild.id)
-    await ctx.respond(embed=embed, view=view)
-
-
-def stop_recording(ctx: discord.ApplicationContext, mode: Mode):
-    container.config.mode.override(mode)
-    meeting = meetings.get(ctx.guild.id)
+    meeting.recording_handler = create_recording_handler(guild_id, mode)
 
     logger.info(
         f"Stopping recording in {ctx.channel.name} for guild {ctx.guild.id} with mode {mode}"
@@ -127,26 +90,80 @@ def stop_recording(ctx: discord.ApplicationContext, mode: Mode):
 
     if meeting is not None:
         meeting.voice_client.stop_recording()
-        return "録音を停止しました。"
+        await ctx.respond("録音を停止しました。")
     else:
-        return "録音は開始されていません。"
+        await ctx.respond("録音は開始されていません。")
+
+
+@bot.command(description="現在のパラメータや利用中のコンポーネント情報を表示します。")
+async def parameters(ctx: discord.ApplicationContext):
+    await ctx.defer()
+
+    from src.ui.embeds import create_parameters_embed
+    from src.ui.view.edit_parameters import EditParametersView
+
+    embed = create_parameters_embed(ctx.guild.id)
+    view = EditParametersView(ctx.guild.id)
+    await ctx.respond(embed=embed, view=view)
 
 
 async def on_finish_recording(sink: FileSink, channel: discord.TextChannel):
     await sink.vc.disconnect()
-
-    audio_handler: RecordingHandler = container.audio_handler()
 
     meeting = meetings.get(channel.guild.id)
 
     if meeting is None:
         return
 
+    if meeting.recording_handler is None:
+        return
+
     attendees = {user: AttendeeData(file) for user, file in sink.audio_data.items()}
 
     context = MessageContext(channel=channel)
 
-    async for data in audio_handler(attendees):
+    async for data in meeting.recording_handler(attendees):
         await data.effect(context)
     # clean up
     del meetings[channel.guild.id]
+
+
+def create_recording_handler(guild_id: int, mode: Mode) -> RecordingHandler:
+    if mode == Mode.SAVE:
+        return SaveToFolderRecordingHandler()
+
+    parameters_repository = container.parameters_repository()
+    parameters = parameters_repository.get_parameters(guild_id)
+
+    if mode == Mode.TRANSCRIPTION:
+        container.config.hotwords.override(parameters.hotwords)
+
+        return TranscriptionAudioHandler(
+            transcriber=container.transcriber(),
+        )
+
+    if mode == Mode.MINUTE:
+        container.config.hotwords.override(parameters.hotwords)
+        container.config.summarize_prompt_key.override(
+            parameters.prompt_key or PromptKey.DEFAULT
+        )
+
+        repo_url = parameters.github_repo_url
+        view_builder = (
+            CommitViewBuilder(GitHubPusher(repo_url))
+            if (repo_url := parameters.github_repo_url)
+            else EditViewBuilder()
+        )
+        context_provider = ParametersBaseContextProvider(parameters)
+        formatter = MdFormatSummaryFormatter()
+
+        return MinuteAudioHandler(
+            transcriber=container.transcriber(),
+            summarizer=container.summarizer(),
+            summarize_prompt_provider=container.prompt_provider(),
+            summary_formatter=formatter,
+            view_builder=view_builder,
+            context_provider=context_provider,
+        )
+
+    return container.audio_handler()

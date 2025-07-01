@@ -31,7 +31,7 @@ class EditParametersView(discord.ui.View):
         repository.reset_parameters(self.guild_id)
 
         from src.ui.embeds import create_parameters_embed
-        
+
         embed = create_parameters_embed(self.guild_id)
-        
+
         await interaction.response.edit_message(embed=embed, view=self)

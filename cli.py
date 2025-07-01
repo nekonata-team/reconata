@@ -5,11 +5,10 @@ from pathlib import Path
 import discord
 
 from container import container
-from src.bot.command import bot
+from src.bot.command import bot, create_recording_handler
 from src.bot.enums import Mode
 from src.recording_handler.common import create_path_builder
 from src.recording_handler.message_data import MessageContext, SendData
-from src.recording_handler.minute import MinuteAudioHandler
 
 
 def parse_args():
@@ -34,24 +33,30 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_channel_id_from_url(channel_url):
+def parse_discord_channel_url(channel_url):
     # channel_url例: https://discord.com/channels/<guild_id>/<channel_id>
-    m = re.match(r"https://discord.com/channels/\d+/(\d+)", channel_url)
+    m = re.match(r"https://discord.com/channels/(\d+)/(\d+)", channel_url)
     if not m:
         raise ValueError(f"不正なDiscordチャンネルURL: {channel_url}")
-    return int(m.group(1))
+    return int(m.group(1)), int(m.group(2))
 
 
 def on_ready_send_messages_to_channel(
-    bot: discord.Bot, channel_id: int, mixed_audio_path: Path, context_path: Path
+    bot: discord.Bot,
+    guild_id: int,
+    channel_id: int,
+    mixed_audio_path: Path,
+    context_path: Path,
 ):
     container.mode.override(Mode.MINUTE)
 
     context = context_path.read_text(encoding="utf-8")
 
-    audio_handler: MinuteAudioHandler = container.audio_handler()
+    recording_handler = create_recording_handler(guild_id, Mode.MINUTE)
     path_builder = create_path_builder(Path("./data"))
-    messages = audio_handler.handle_mixed_audio(path_builder, mixed_audio_path, context)
+    messages = recording_handler.handle_mixed_audio(
+        path_builder, mixed_audio_path, context
+    )
 
     @bot.event
     async def on_ready():
@@ -91,7 +96,7 @@ if __name__ == "__main__":
     context_path = args.context_path
 
     try:
-        channel_id = get_channel_id_from_url(args.channel_url)
+        guild_id, channel_id = parse_discord_channel_url(args.channel_url)
     except ValueError as e:
         raise ValueError(f"チャンネルURLの解析に失敗: {e}")
 
@@ -106,6 +111,7 @@ if __name__ == "__main__":
 
     on_ready_send_messages_to_channel(
         bot,
+        guild_id,
         channel_id,
         mixed_audio_path,
         context_path,

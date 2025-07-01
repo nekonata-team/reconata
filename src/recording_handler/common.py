@@ -1,16 +1,11 @@
 from datetime import datetime
 from logging import getLogger
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
-from nekomeeta.input_provider.context import NekonataContext
-
-from src.bot.type import Attendees
+from src.bot.attendee import Attendees
 from src.mixer.ffmpeg import FFmpegMixer
 
 from .path_builder import PathBuilder
-
-_TZ = ZoneInfo("Asia/Tokyo")
 
 logger = getLogger(__name__)
 
@@ -24,14 +19,6 @@ def mix(files: list[Path], output_file: Path) -> Path:
     mixer = FFmpegMixer()
     mixer.mix(files, output_file)
     return output_file
-
-
-def get_context(ids: list[int]) -> str:
-    participant_names = ",".join(
-        [NekonataContext.id2name.get(str(id), f"<@{id}>") for id in ids]
-    )
-    today_str = datetime.now(_TZ).strftime("%Y年%m月%d日")
-    return f"録音日: {today_str}\n参加者: {participant_names}\n補足: {NekonataContext.note}"
 
 
 def save_all_audio(path_builder: PathBuilder, attendees: Attendees) -> list[Path]:

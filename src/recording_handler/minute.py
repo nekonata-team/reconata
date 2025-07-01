@@ -12,10 +12,11 @@ from nekomeeta.summarizer.prompt_provider.summarize_prompt_provider import (
 from nekomeeta.summarizer.summarizer import Summarizer
 from nekomeeta.transcriber.transcriber import IterableTranscriber, Transcriber
 
-from src.bot.type import Attendees
+from src.bot.attendee import Attendees
 from src.ui.view_builder import ViewBuilder
 
-from .common import create_path_builder, get_context, mix, save_all_audio
+from .common import create_path_builder, mix, save_all_audio
+from .context_provider import ContextProvider
 from .message_data import (
     CreateThreadData,
     EditMessageData,
@@ -35,12 +36,13 @@ logger = getLogger(__name__)
 class MinuteAudioHandler(RecordingHandler):
     def __init__(
         self,
-        dir: Path,
         transcriber: Transcriber | IterableTranscriber,
         summarizer: Summarizer,
         summarize_prompt_provider: ContextualSummarizePromptProvider,
         summary_formatter: SummaryFormatter,
         view_builder: ViewBuilder,
+        context_provider: ContextProvider,
+        dir: Path = Path("./data"),
     ):
         self.dir = dir
         self.transcriber = transcriber
@@ -48,6 +50,7 @@ class MinuteAudioHandler(RecordingHandler):
         self.summarize_prompt_provider = summarize_prompt_provider
         self.summary_formatter = summary_formatter
         self.view_builder = view_builder
+        self.context_provider = context_provider
 
     async def __call__(self, attendees: Attendees) -> AudioHandlerResult:
         if not attendees:
@@ -62,7 +65,7 @@ class MinuteAudioHandler(RecordingHandler):
         )
 
         path_builder = create_path_builder(self.dir)
-        context = get_context(list(attendees.keys()))
+        context = self.context_provider(list(attendees.keys()))
 
         yield SendThreadData(
             embed=discord.Embed(

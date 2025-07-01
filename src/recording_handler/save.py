@@ -1,9 +1,10 @@
 import asyncio
 from pathlib import Path
 
-from handler.common import create_path_builder, get_attendees_ids_string, save_all_audio
-from types_ import Attendees, SendData
+from src.bot.type import Attendees
 
+from .common import create_path_builder, get_attendees_ids_string, save_all_audio
+from .message_data import SendData
 from .recording_handler import (
     AUDIO_NOT_RECORDED,
     AudioHandlerResult,

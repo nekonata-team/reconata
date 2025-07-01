@@ -13,11 +13,11 @@ from nekomeeta.summarizer.prompt_provider.structured_markdown import (
 )
 from nekomeeta.transcriber.faster_whisper import FasterWhisperTranscriber
 
-from enums import Mode, PromptKey, ViewType
-from handler.minute import MinuteAudioHandler
-from handler.save import SaveToFolderRecordingHandler
-from handler.transcription import TranscriptionAudioHandler
-from view_builder import CommitViewBuilder, EditViewBuilder
+from src.bot.enums import Mode, PromptKey, ViewType
+from src.recording_handler.minute import MinuteAudioHandler
+from src.recording_handler.save import SaveToFolderRecordingHandler
+from src.recording_handler.transcription import TranscriptionAudioHandler
+from src.ui.view_builder import CommitViewBuilder, EditViewBuilder
 
 load_dotenv()
 
@@ -97,5 +97,3 @@ container.config.beam_size.from_env("BEAM_SIZE", default=5, as_=int)
 container.config.batch_size.from_env("BATCH_SIZE", default=8, as_=int)
 container.config.discord_bot_token.from_env("DISCORD_BOT_TOKEN", required=True)
 container.config.log_level.from_env("LOG_LEVEL", default="INFO", as_=str)
-container.config.summarize_prompt_key.from_value(PromptKey.DEFAULT)
-container.config.view_type.from_value(ViewType.COMMIT)

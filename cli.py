@@ -4,12 +4,12 @@ from pathlib import Path
 
 import discord
 
-from command import configure
+from bot.bot import bot
 from container import container
-from enums import Mode
-from handler.common import create_path_builder
-from handler.minute import MinuteAudioHandler
-from types_ import MessageContext, SendData
+from recording_handler.common import create_path_builder
+from recording_handler.minute import MinuteAudioHandler
+from src.bot.enums import Mode
+from src.recording_handler.message_data import MessageContext, SendData
 
 
 def parse_args():
@@ -104,7 +104,6 @@ if __name__ == "__main__":
             f"指定されたコンテキストファイルが存在しません: {context_path}"
         )
 
-    bot = configure()
     on_ready_send_messages_to_channel(
         bot,
         channel_id,

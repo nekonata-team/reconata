@@ -5,9 +5,10 @@ from zoneinfo import ZoneInfo
 
 from nekomeeta.input_provider.context import NekonataContext
 
-from handler.mixer import FFmpegMixer
-from handler.path_builder import PathBuilder
-from types_ import Attendees
+from src.bot.type import Attendees
+from src.mixer.ffmpeg import FFmpegMixer
+
+from .path_builder import PathBuilder
 
 _TZ = ZoneInfo("Asia/Tokyo")
 

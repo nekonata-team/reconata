@@ -6,15 +6,15 @@ from typing import cast
 import discord
 from nekomeeta.transcriber.transcriber import IterableTranscriber, Transcriber
 
-from types_ import (
-    Attendees,
+from src.bot.type import Attendees
+
+from .common import create_path_builder, get_attendees_ids_string, mix, save_all_audio
+from .message_data import (
     CreateThreadData,
     EditMessageData,
     SendData,
     SendThreadData,
 )
-
-from .common import create_path_builder, get_attendees_ids_string, mix, save_all_audio
 from .recording_handler import (
     AUDIO_NOT_RECORDED,
     AudioHandlerResult,

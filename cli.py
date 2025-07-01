@@ -4,12 +4,12 @@ from pathlib import Path
 
 import discord
 
-from bot.bot import bot
 from container import container
-from recording_handler.common import create_path_builder
-from recording_handler.minute import MinuteAudioHandler
+from src.bot.command import bot
 from src.bot.enums import Mode
+from src.recording_handler.common import create_path_builder
 from src.recording_handler.message_data import MessageContext, SendData
+from src.recording_handler.minute import MinuteAudioHandler
 
 
 def parse_args():

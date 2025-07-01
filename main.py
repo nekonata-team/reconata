@@ -2,7 +2,7 @@ import logging
 
 from container import container
 from logging_config import load_logging_config
-from src.bot.bot import bot
+from src.bot.command import bot
 
 load_logging_config(container.config.log_level())
 

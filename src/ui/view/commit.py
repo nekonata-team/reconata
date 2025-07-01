@@ -17,7 +17,7 @@ class CommitView(discord.ui.View):
             )
             return
         await interaction.response.send_message(
-            "コミットを実行しますか？",
+            f"コミットを実行しますか？（{self.pusher.repo_url}）",
             view=ConfirmView(self.pusher, message),
             ephemeral=True,
         )

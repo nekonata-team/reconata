@@ -22,7 +22,7 @@ from .recording_handler import (
 )
 
 
-class TranscriptionAudioHandler(RecordingHandler):
+class TranscriptionRecordingHandler(RecordingHandler):
     def __init__(
         self,
         transcriber: Transcriber,

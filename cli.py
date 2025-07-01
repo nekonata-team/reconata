@@ -9,6 +9,7 @@ from src.bot.command import bot, create_recording_handler
 from src.bot.enums import Mode
 from src.recording_handler.common import create_path_builder
 from src.recording_handler.message_data import MessageContext, SendData
+from src.recording_handler.minute import MinuteRecordingHandler
 
 
 def parse_args():
@@ -54,36 +55,38 @@ def on_ready_send_messages_to_channel(
 
     recording_handler = create_recording_handler(guild_id, Mode.MINUTE)
     path_builder = create_path_builder(Path("./data"))
-    messages = recording_handler.handle_mixed_audio(
-        path_builder, mixed_audio_path, context
-    )
 
-    @bot.event
-    async def on_ready():
-        channel = bot.get_channel(channel_id)
-        if channel is None:
-            print(f"チャンネルID {channel_id} が見つかりません")
-            await bot.close()
-            return
-        # TextChannel型にキャスト
-        if not isinstance(channel, discord.TextChannel):
-            print(f"チャンネルID {channel_id} はTextChannelではありません")
-            await bot.close()
-            return
-        context = MessageContext(channel=channel)
-        try:
-            last_message = None
-            async for last_message in messages:
-                pass
+    if isinstance(recording_handler, MinuteRecordingHandler):
+        messages = recording_handler.handle_mixed_audio(
+            path_builder, mixed_audio_path, context
+        )
 
-            if isinstance(last_message, SendData):
-                await last_message.effect(context)
-            else:
-                print(
-                    "最後のメッセージがSendDataではありません。処理をスキップします。"
-                )
-        except Exception as e:
-            print(f"送信中にエラー: {e}")
+        @bot.event
+        async def on_ready():
+            channel = bot.get_channel(channel_id)
+            if channel is None:
+                print(f"チャンネルID {channel_id} が見つかりません")
+                await bot.close()
+                return
+            # TextChannel型にキャスト
+            if not isinstance(channel, discord.TextChannel):
+                print(f"チャンネルID {channel_id} はTextChannelではありません")
+                await bot.close()
+                return
+            context = MessageContext(channel=channel)
+            try:
+                last_message = None
+                async for last_message in messages:
+                    pass
+
+                if isinstance(last_message, SendData):
+                    await last_message.effect(context)
+                else:
+                    print(
+                        "最後のメッセージがSendDataではありません。処理をスキップします。"
+                    )
+            except Exception as e:
+                print(f"送信中にエラー: {e}")
 
 
 if __name__ == "__main__":

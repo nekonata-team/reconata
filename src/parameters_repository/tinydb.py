@@ -20,7 +20,7 @@ class TinyDBParametersRepository(ParametersRepository):
 
         if result:
             # Pydanticモデルに変換
-            return Parameters(**result["parameters"])
+            return Parameters(**result["parameters"])  # type: ignore
 
         return Parameters()
 

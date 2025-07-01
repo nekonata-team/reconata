@@ -11,10 +11,10 @@ from src.recording_handler.context_provider import ParametersBaseContextProvider
 from src.recording_handler.message_data import (
     MessageContext,
 )
-from src.recording_handler.minute import MinuteAudioHandler
+from src.recording_handler.minute import MinuteRecordingHandler
 from src.recording_handler.recording_handler import RecordingHandler
 from src.recording_handler.save import SaveToFolderRecordingHandler
-from src.recording_handler.transcription import TranscriptionAudioHandler
+from src.recording_handler.transcription import TranscriptionRecordingHandler
 from src.ui.view_builder import CommitViewBuilder, EditViewBuilder
 
 from .attendee import AttendeeData
@@ -82,10 +82,11 @@ async def stop(
     if meeting is None:
         return "録音情報がありません。"
 
-    meeting.recording_handler = create_recording_handler(guild_id, mode)
+    mode_ = Mode(mode)  # 型エラーの対処
+    meeting.recording_handler = create_recording_handler(guild_id, mode_)
 
     logger.info(
-        f"Stopping recording in {ctx.channel.name} for guild {ctx.guild.id} with mode {mode}"
+        f"Stopping recording in {ctx.channel.name} for guild {ctx.guild.id} with mode {mode_}"
     )
 
     if meeting is not None:
@@ -138,7 +139,7 @@ def create_recording_handler(guild_id: int, mode: Mode) -> RecordingHandler:
     if mode == Mode.TRANSCRIPTION:
         container.config.hotwords.override(parameters.hotwords)
 
-        return TranscriptionAudioHandler(
+        return TranscriptionRecordingHandler(
             transcriber=container.transcriber(),
         )
 
@@ -157,7 +158,7 @@ def create_recording_handler(guild_id: int, mode: Mode) -> RecordingHandler:
         context_provider = ParametersBaseContextProvider(parameters)
         formatter = MdFormatSummaryFormatter()
 
-        return MinuteAudioHandler(
+        return MinuteRecordingHandler(
             transcriber=container.transcriber(),
             summarizer=container.summarizer(),
             summarize_prompt_provider=container.prompt_provider(),

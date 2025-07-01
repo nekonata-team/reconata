@@ -33,7 +33,7 @@ from .recording_handler import (
 logger = getLogger(__name__)
 
 
-class MinuteAudioHandler(RecordingHandler):
+class MinuteRecordingHandler(RecordingHandler):
     def __init__(
         self,
         transcriber: Transcriber | IterableTranscriber,

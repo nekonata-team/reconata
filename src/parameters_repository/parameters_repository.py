@@ -6,6 +6,13 @@ from pydantic import BaseModel, Field
 from src.bot.enums import PromptKey
 
 
+class GitHub(BaseModel):
+    repo_url: str = Field(description="GitHubリポジトリのURL")
+    local_repo_path: str = Field(description="GitHubリポジトリのローカルパス")
+
+    model_config = {"frozen": True}
+
+
 class Parameters(BaseModel):
     prompt_key: PromptKey | None = Field(
         default=None, description="使用するプロンプトのキー"
@@ -16,9 +23,7 @@ class Parameters(BaseModel):
     additional_context: str | None = Field(
         default=None, description="追加のコンテキスト情報"
     )
-    github_repo_url: str | None = Field(
-        default=None, description="GitHubリポジトリのURL"
-    )
+    github: GitHub | None = Field(default=None, description="GitHub関連の情報")
     hotwords: str | None = Field(default=None, description="文字起こし時のホットワード")
 
     model_config = {"frozen": True}

@@ -2,7 +2,7 @@ import discord
 
 from container import container
 from src.bot.enums import PromptKey
-from src.parameters_repository.parameters_repository import Parameters
+from src.parameters_repository.parameters_repository import GitHub, Parameters
 
 
 class ParametersModal(discord.ui.Modal):
@@ -44,7 +44,9 @@ class ParametersModal(discord.ui.Modal):
         self.github_repo_url_input = discord.ui.InputText(
             label="GitHub リポジトリURL",
             placeholder="https://github.com/username/repository",
-            value=initial_params.github_repo_url or "",
+            value=github.repo_url
+            if (github := initial_params.github) is not None
+            else "",
             max_length=200,
             required=False,
         )
@@ -96,7 +98,12 @@ class ParametersModal(discord.ui.Modal):
                 prompt_key=prompt_key,
                 hotwords=hotwords,
                 additional_context=additional_context,
-                github_repo_url=github_repo_url,
+                github=GitHub(
+                    repo_url=github_repo_url,
+                    local_repo_path=f"data/repo/{github_repo_url.split('/')[-1].split('.')[0]}_{interaction.guild_id}",
+                )
+                if github_repo_url
+                else None,
                 user_names=user_names,
             )
 

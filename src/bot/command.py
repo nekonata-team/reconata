@@ -149,10 +149,15 @@ def create_recording_handler(guild_id: int, mode: Mode) -> RecordingHandler:
             parameters.prompt_key or PromptKey.DEFAULT
         )
 
-        repo_url = parameters.github_repo_url
+        github = parameters.github
         view_builder = (
-            CommitViewBuilder(GitHubPusher(repo_url))
-            if (repo_url := parameters.github_repo_url)
+            CommitViewBuilder(
+                GitHubPusher(
+                    repo_url=data.repo_url,
+                    local_repo_path=data.local_repo_path,
+                )
+            )
+            if (data := github)
             else EditViewBuilder()
         )
         context_provider = ParametersBaseContextProvider(parameters)

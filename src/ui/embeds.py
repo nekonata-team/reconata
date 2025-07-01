@@ -28,8 +28,8 @@ def create_parameters_embed(guild_id: int) -> discord.Embed:
         embed.add_field(name="追加コンテキスト", value="未設定", inline=False)
 
     # GitHub リポジトリURL
-    if params.github_repo_url:
-        masked_url = params.github_repo_url
+    if (github := params.github) is not None:
+        masked_url = github.repo_url
         if "@github.com/" in masked_url:
             import re
 

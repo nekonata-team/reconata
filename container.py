@@ -14,6 +14,7 @@ from nekomeeta.summarizer.prompt_provider.structured_markdown import (
 from nekomeeta.transcriber.faster_whisper import FasterWhisperTranscriber
 
 from src.bot.enums import Mode, PromptKey, ViewType
+from src.parameters_repository.tinydb import TinyDBParametersRepository
 from src.recording_handler.minute import MinuteAudioHandler
 from src.recording_handler.save import SaveToFolderRecordingHandler
 from src.recording_handler.transcription import TranscriptionAudioHandler
@@ -87,6 +88,7 @@ class Container(containers.DeclarativeContainer):
             ),
         },
     )
+    parameters_repository = providers.Singleton(TinyDBParametersRepository)
 
 
 container = Container()
@@ -97,3 +99,6 @@ container.config.beam_size.from_env("BEAM_SIZE", default=5, as_=int)
 container.config.batch_size.from_env("BATCH_SIZE", default=8, as_=int)
 container.config.discord_bot_token.from_env("DISCORD_BOT_TOKEN", required=True)
 container.config.log_level.from_env("LOG_LEVEL", default="INFO", as_=str)
+container.config.summarize_prompt_key.from_env(
+    "SUMMARIZE_PROMPT_KEY", default=PromptKey.DEFAULT
+)

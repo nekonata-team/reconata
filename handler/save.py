@@ -1,17 +1,17 @@
 import asyncio
 from pathlib import Path
 
+from handler.common import create_path_builder, get_attendees_ids_string, save_all_audio
 from types_ import Attendees, SendData
 
-from .audio_handler import (
+from .recording_handler import (
     AUDIO_NOT_RECORDED,
-    AudioHandler,
     AudioHandlerResult,
+    RecordingHandler,
 )
-from .feature.attendees_handler import AttendeesHandler
 
 
-class SaveToFolderAudioHandler(AudioHandler):
+class SaveToFolderRecordingHandler(RecordingHandler):
     def __init__(self, dir: Path):
         self.dir = dir
 
@@ -20,8 +20,8 @@ class SaveToFolderAudioHandler(AudioHandler):
             yield SendData(content=AUDIO_NOT_RECORDED)
             return
 
-        handler = AttendeesHandler(attendees, self.dir, self.encoding)
-        await asyncio.to_thread(handler.save_all_audio)
+        path_builder = create_path_builder(self.dir)
+        await asyncio.to_thread(save_all_audio, path_builder, attendees)
 
-        content = f"録音ファイルの保存が完了しました。\n\n参加者:\n{handler.get_attendees_ids_string()}"
+        content = f"録音ファイルの保存が完了しました。\n\n参加者:\n{get_attendees_ids_string(attendees)}"
         yield SendData(content=content)

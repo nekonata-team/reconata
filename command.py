@@ -1,4 +1,5 @@
 from io import BytesIO
+from logging import getLogger
 from typing import cast
 
 import discord
@@ -6,7 +7,7 @@ import discord
 from container import container
 from enums import Mode, PromptKey, ViewType
 from file_sink import FileSink
-from handler.audio_handler import AudioHandler
+from handler.recording_handler import RecordingHandler
 from types_ import (
     AttendeeData,
     Meeting,
@@ -14,6 +15,8 @@ from types_ import (
     SendData,
 )
 from view import CommitView
+
+logger = getLogger(__name__)
 
 
 def configure() -> discord.Bot:
@@ -38,6 +41,10 @@ def configure() -> discord.Bot:
         if (channel := voice.channel) is not None:
             vc = await channel.connect()
             meetings[ctx.guild.id] = Meeting(voice_client=vc)
+
+            logger.info(
+                f"Starting recording in {channel.name} for guild {ctx.guild.id}"
+            )
 
             vc.start_recording(
                 FileSink(),
@@ -73,17 +80,24 @@ def configure() -> discord.Bot:
             ],
         ),
     ):
+        await ctx.defer()
+
         container.config.summarize_prompt_key.override(prompt_key)
         container.config.view_type.override(view_type)
-        await stop_recording(ctx, Mode.MINUTE)
+        msg = stop_recording(ctx, Mode.MINUTE)
+        await ctx.respond(msg)
 
     @stop.command(description="文字起こしモードで録音を停止します")
     async def transcription(ctx: discord.ApplicationContext):
-        await stop_recording(ctx, Mode.TRANSCRIPTION)
+        await ctx.defer()
+        msg = stop_recording(ctx, Mode.TRANSCRIPTION)
+        await ctx.respond(msg)
 
     @stop.command(description="保存モードで録音を停止します")
     async def save(ctx: discord.ApplicationContext):
-        await stop_recording(ctx, Mode.SAVE)
+        await ctx.defer()
+        msg = stop_recording(ctx, Mode.SAVE)
+        await ctx.respond(msg)
 
     bot.add_application_command(stop)
 
@@ -136,23 +150,24 @@ def configure() -> discord.Bot:
 
         await ctx.respond(embed=embed)
 
-    async def stop_recording(ctx: discord.ApplicationContext, mode: Mode):
-        """録音停止の共通処理"""
-        await ctx.defer()
-
+    def stop_recording(ctx: discord.ApplicationContext, mode: Mode):
         container.config.mode.override(mode)
         meeting = meetings.get(ctx.guild.id)
+
+        logger.info(
+            f"Stopping recording in {ctx.channel.name} for guild {ctx.guild.id} with mode {mode}"
+        )
+
         if meeting is not None:
             meeting.voice_client.stop_recording()
-            await ctx.delete()
+            return "録音を停止しました。"
         else:
-            await ctx.respond("録音は開始されていません。")
+            return "録音は開始されていません。"
 
     async def on_finish_recording(sink: FileSink, channel: discord.TextChannel):
         await sink.vc.disconnect()
 
-        audio_handler: AudioHandler = container.audio_handler()
-        audio_handler.encoding = "mp3"
+        audio_handler: RecordingHandler = container.audio_handler()
 
         meeting = meetings.get(channel.guild.id)
 

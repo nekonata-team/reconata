@@ -12,6 +12,7 @@ from nekomeeta.summarizer.prompt_provider.summarize_prompt_provider import (
 from nekomeeta.summarizer.summarizer import Summarizer
 from nekomeeta.transcriber.transcriber import IterableTranscriber, Transcriber
 
+from handler.path_builder import PathBuilder
 from types_ import (
     Attendees,
     CreateThreadData,
@@ -21,19 +22,17 @@ from types_ import (
 )
 from view_builder import ViewBuilder
 
-from .audio_handler import (
+from .common import create_path_builder, get_context, mix, save_all_audio
+from .recording_handler import (
     AUDIO_NOT_RECORDED,
-    AudioHandler,
-    AudioHandlerFromCLI,
     AudioHandlerResult,
+    RecordingHandler,
 )
-from .feature.attendees_handler import AttendeesHandler
-from .feature.path_builder import PathBuilder
 
 logger = getLogger(__name__)
 
 
-class MinuteAudioHandler(AudioHandler):
+class MinuteAudioHandler(RecordingHandler):
     def __init__(
         self,
         dir: Path,
@@ -51,6 +50,10 @@ class MinuteAudioHandler(AudioHandler):
         self.view_builder = view_builder
 
     async def __call__(self, attendees: Attendees) -> AudioHandlerResult:
+        if not attendees:
+            yield SendData(content=AUDIO_NOT_RECORDED)
+            return
+
         today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         yield CreateThreadData(
             name="録音議事録スレッド - " + today,
@@ -58,13 +61,9 @@ class MinuteAudioHandler(AudioHandler):
             type=discord.ChannelType.public_thread,
         )
 
-        if not attendees:
-            yield SendThreadData(content=AUDIO_NOT_RECORDED)
-            return
+        path_builder = create_path_builder(self.dir)
+        context = get_context(list(attendees.keys()))
 
-        handler = AttendeesHandler(attendees, self.dir, self.encoding)
-
-        context = handler.save_context()
         yield SendThreadData(
             embed=discord.Embed(
                 title="議事録のコンテキスト",
@@ -77,10 +76,12 @@ class MinuteAudioHandler(AudioHandler):
             embed=discord.Embed(description="録音ファイルを処理しています。")
         )
 
-        files = await asyncio.to_thread(handler.save_all_audio)
+        files = await asyncio.to_thread(save_all_audio, path_builder, attendees)
 
         try:
-            mixed_file_path = await asyncio.to_thread(handler.mix, files)
+            mixed_file_path = await asyncio.to_thread(
+                mix, files, path_builder.mixed_audio()
+            )
             yield SendThreadData(
                 embed=discord.Embed(
                     description="ミックスされた音声ファイルを保存しました。",
@@ -94,12 +95,25 @@ class MinuteAudioHandler(AudioHandler):
             )
             return
 
+        async for message in self.handle_mixed_audio(
+            path_builder,
+            mixed_file_path,
+            context,
+        ):
+            yield message
+
+    async def handle_mixed_audio(
+        self,
+        path_builder: PathBuilder,
+        mixed_file_path: Path,
+        context: str,
+    ) -> AudioHandlerResult:
         yield SendThreadData(
             embed=discord.Embed(description="文字起こしを開始します。")
         )
 
         try:
-            transcription_path = handler.path_builder.transcription()
+            transcription_path = path_builder.transcription()
 
             if isinstance(self.transcriber, IterableTranscriber):
                 lines, messages = self._transcribe_iter(
@@ -125,7 +139,7 @@ class MinuteAudioHandler(AudioHandler):
             return
 
         try:
-            summary_path = handler.path_builder.summary()
+            summary_path = path_builder.summary()
             summary, messages = self._summarize_and_save(
                 summary_path,
                 transcription,
@@ -137,7 +151,7 @@ class MinuteAudioHandler(AudioHandler):
             yield SendThreadData(content=f"要約に失敗しました: {e}")
             return
 
-        yield _create_final_send_data(
+        yield self._create_final_send_data(
             transcription_path,
             self.summary_formatter.format(summary),
             self.view_builder,
@@ -208,86 +222,24 @@ class MinuteAudioHandler(AudioHandler):
 
         return summary, message_iter()
 
-
-class MinuteAudioHandlerFromCLI(AudioHandlerFromCLI):
-    def __init__(
+    def _create_final_send_data(
         self,
-        dir: Path,
-        transcriber: Transcriber,
-        summarizer: Summarizer,
-        summarize_prompt_provider: ContextualSummarizePromptProvider,
-        summary_formatter: SummaryFormatter,
+        transcription_path: Path,
+        summary: str,
         view_builder: ViewBuilder,
-    ):
-        self.dir = dir
-        self.transcriber = transcriber
-        self.summarizer = summarizer
-        self.summarize_prompt_provider = summarize_prompt_provider
-        self.summary_formatter = summary_formatter
-        self.view_builder = view_builder
-
-    async def __call__(
-        self,
-        mixed_audio_path: Path,
-        context_path: Path,
-    ) -> AudioHandlerResult:
-        path_builder = PathBuilder(self.dir, "---")
-
-        transcription_path = path_builder.transcription()
-
-        logger.info(
-            f"Transcribing audio from {mixed_audio_path} to {transcription_path}"
+    ) -> SendData:
+        now = datetime.now()
+        embed = discord.Embed(
+            title=now.strftime("%Y年%m月%d日"),
+            description=summary,
+            timestamp=now,
         )
+        view = view_builder.create_view()
 
-        if isinstance(self.transcriber, IterableTranscriber):
-            transcription = ""
-            async for segment in self.transcriber.transcribe_iter(
-                str(mixed_audio_path)
-            ):
-                transcription += segment.text + "\n"
-            with open(transcription_path, "w", encoding="utf-8") as f:
-                f.write(transcription)
-        else:
-            transcription = self.transcriber.transcribe(str(mixed_audio_path))
-            with open(transcription_path, "w", encoding="utf-8") as f:
-                f.write(transcription)
+        logger.info("Embed created.")
 
-        logger.info("Transcription completed.")
-        logger.info(
-            f"Summarizing transcription from {transcription_path} with context from {context_path}"
+        return SendData(
+            files=[discord.File(transcription_path, "transcription.txt")],
+            embed=embed,
+            view=view,
         )
-
-        summary_path = path_builder.summary()
-        self.summarize_prompt_provider.additional_context = context_path.read_text()
-
-        summary = self.summary_formatter.format(
-            self.summarizer.generate_meeting_notes(transcription)
-        )
-        with open(summary_path, "w", encoding="utf-8") as f:
-            f.write(summary)
-
-        logger.info("Summary completed.")
-
-        yield _create_final_send_data(transcription_path, summary, self.view_builder)
-
-
-def _create_final_send_data(
-    transcription_path: Path,
-    summary: str,
-    view_builder: ViewBuilder,
-) -> SendData:
-    now = datetime.now()
-    embed = discord.Embed(
-        title=now.strftime("%Y年%m月%d日"),
-        description=summary,
-        timestamp=now,
-    )
-    view = view_builder.create_view()
-
-    logger.info("Embed created.")
-
-    return SendData(
-        files=[discord.File(transcription_path, "transcription.txt")],
-        embed=embed,
-        view=view,
-    )

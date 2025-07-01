@@ -14,15 +14,15 @@ from types_ import (
     SendThreadData,
 )
 
-from .audio_handler import (
+from .common import create_path_builder, get_attendees_ids_string, mix, save_all_audio
+from .recording_handler import (
     AUDIO_NOT_RECORDED,
-    AudioHandler,
     AudioHandlerResult,
+    RecordingHandler,
 )
-from .feature.attendees_handler import AttendeesHandler
 
 
-class TranscriptionAudioHandler(AudioHandler):
+class TranscriptionAudioHandler(RecordingHandler):
     def __init__(
         self,
         dir: Path,
@@ -32,6 +32,10 @@ class TranscriptionAudioHandler(AudioHandler):
         self.transcriber = transcriber
 
     async def __call__(self, attendees: Attendees) -> AudioHandlerResult:
+        if not attendees:
+            yield SendData(content=AUDIO_NOT_RECORDED)
+            return
+
         today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         yield CreateThreadData(
             name="録音議事録スレッド - " + today,
@@ -39,22 +43,22 @@ class TranscriptionAudioHandler(AudioHandler):
             type=discord.ChannelType.public_thread,
         )
 
-        if not attendees:
-            yield SendThreadData(content=AUDIO_NOT_RECORDED)
-            return
-
-        handler = AttendeesHandler(attendees, self.dir, self.encoding)
+        path_builder = create_path_builder(self.dir)
 
         yield SendThreadData(
             embed=discord.Embed(
-                description=f"録音ファイルを処理しています。\n\n参加者:\n{handler.get_attendees_ids_string()}",
+                description=f"録音ファイルを処理しています。\n\n参加者:\n{get_attendees_ids_string(attendees)}",
             )
         )
 
-        files = await asyncio.to_thread(handler.save_all_audio)
+        files = await asyncio.to_thread(save_all_audio, path_builder, attendees)
 
         try:
-            mixed_file_path = await asyncio.to_thread(handler.mix, files)
+            mixed_file_path = await asyncio.to_thread(
+                mix,
+                files,
+                path_builder.mixed_audio(),
+            )
             yield SendThreadData(
                 embed=discord.Embed(
                     description="ミックスされた音声ファイルを保存しました。",
@@ -73,7 +77,7 @@ class TranscriptionAudioHandler(AudioHandler):
         )
 
         try:
-            transcription_path = handler.path_builder.transcription()
+            transcription_path = path_builder.transcription()
 
             if isinstance(self.transcriber, IterableTranscriber):
                 lines, messages = self._transcribe_iter(

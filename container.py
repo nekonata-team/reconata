@@ -14,8 +14,8 @@ from nekomeeta.summarizer.prompt_provider.structured_markdown import (
 from nekomeeta.transcriber.faster_whisper import FasterWhisperTranscriber
 
 from enums import Mode, PromptKey, ViewType
-from handler.minute import MinuteAudioHandler, MinuteAudioHandlerFromCLI
-from handler.save import SaveToFolderAudioHandler
+from handler.minute import MinuteAudioHandler
+from handler.save import SaveToFolderRecordingHandler
 from handler.transcription import TranscriptionAudioHandler
 from view_builder import CommitViewBuilder, EditViewBuilder
 
@@ -82,19 +82,10 @@ class Container(containers.DeclarativeContainer):
                 transcriber=transcriber,
             ),
             Mode.SAVE: providers.Singleton(
-                SaveToFolderAudioHandler,
+                SaveToFolderRecordingHandler,
                 dir=Path("./data"),
             ),
         },
-    )
-    audio_handler_from_cli = providers.Singleton(
-        MinuteAudioHandlerFromCLI,
-        dir=Path("./data"),
-        transcriber=transcriber,
-        summarizer=summarizer,
-        summarize_prompt_provider=prompt_provider,
-        summary_formatter=formatter,
-        view_builder=view_builder,
     )
 
 

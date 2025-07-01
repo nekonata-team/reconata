@@ -2,17 +2,17 @@ from pathlib import Path
 
 
 class PathBuilder:
-    def __init__(self, dir: Path, encoding: str):
+    def __init__(self, dir: Path, audio_encoding: str = "mp3"):
         self.dir = dir
-        self.encoding = encoding
+        self.audio_encoding = audio_encoding
 
         dir.mkdir(parents=True, exist_ok=True)
 
     def user_audio(self, user_id: int) -> Path:
-        return self.dir / f"{user_id}.{self.encoding}"
+        return self.dir / f"{user_id}.{self.audio_encoding}"
 
     def mixed_audio(self) -> Path:
-        return self.dir / f"mixed.{self.encoding}"
+        return self.dir / f"mixed.{self.audio_encoding}"
 
     def context(self) -> Path:
         return self.dir / "context.txt"

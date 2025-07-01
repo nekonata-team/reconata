@@ -6,7 +6,10 @@ import discord
 
 from command import configure
 from container import container
-from types_ import MessageContext
+from enums import Mode
+from handler.common import create_path_builder
+from handler.minute import MinuteAudioHandler
+from types_ import MessageContext, SendData
 
 
 def parse_args():
@@ -39,9 +42,16 @@ def get_channel_id_from_url(channel_url):
     return int(m.group(1))
 
 
-def on_ready_send_messages_to_channel(bot: discord.Bot, channel_id: int):
-    audio_handler = container.audio_handler_from_cli()
-    messages = audio_handler(mixed_audio_path, context_path)
+def on_ready_send_messages_to_channel(
+    bot: discord.Bot, channel_id: int, mixed_audio_path: Path, context_path: Path
+):
+    container.mode.override(Mode.MINUTE)
+
+    context = context_path.read_text(encoding="utf-8")
+
+    audio_handler: MinuteAudioHandler = container.audio_handler()
+    path_builder = create_path_builder(Path("./data"))
+    messages = audio_handler.handle_mixed_audio(path_builder, mixed_audio_path, context)
 
     @bot.event
     async def on_ready():
@@ -57,8 +67,16 @@ def on_ready_send_messages_to_channel(bot: discord.Bot, channel_id: int):
             return
         context = MessageContext(channel=channel)
         try:
-            async for msg in messages:
-                await msg.effect(context)
+            last_message = None
+            async for last_message in messages:
+                pass
+
+            if isinstance(last_message, SendData):
+                await last_message.effect(context)
+            else:
+                print(
+                    "最後のメッセージがSendDataではありません。処理をスキップします。"
+                )
         except Exception as e:
             print(f"送信中にエラー: {e}")
 
@@ -87,5 +105,10 @@ if __name__ == "__main__":
         )
 
     bot = configure()
-    on_ready_send_messages_to_channel(bot, channel_id)
+    on_ready_send_messages_to_channel(
+        bot,
+        channel_id,
+        mixed_audio_path,
+        context_path,
+    )
     bot.run(container.config.discord_bot_token())

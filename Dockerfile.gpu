@@ -4,7 +4,6 @@ FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     python3.11 \
-    python3.11-venv \
     python3-pip \
     ffmpeg \
     libopus-dev \

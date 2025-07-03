@@ -1,7 +1,7 @@
 {
     "name": "reconata",
-    "dockerComposeFile": "../docker-compose.dev.yml",
-    "service": "dev",
+    "dockerComposeFile": "../docker-compose.yml",
+    "service": "bot",
     "workspaceFolder": "/app",
     "customizations": {
         "vscode": {
@@ -19,5 +19,6 @@
                 "ms-azuretools.vscode-docker"
             ]
         }
-    }
+    },
+    "overrideCommand": true
 }

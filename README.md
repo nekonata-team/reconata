@@ -2,35 +2,26 @@
 
 ## Getting Started
 
+### 環境変数
+
+`.env.example`をコピーして`.env`を作成し、必要な環境変数を設定してください。
+
 ### CPU版
 
 ```bash
+# Bot
 docker compose up bot --build
+
+# CLI
+docker compose run --rm bot cli.py --help
 ```
 
 ### GPU版
 
 ```bash
+# Bot
 docker compose -f docker-compose.gpu.yml up bot --build
+
+# WebSocket
+docker compose -f docker-compose.gpu.yml up websocket --build
 ```
-
-## 環境変数
-
-`.env.example`をコピーして`.env`を作成し、必要な環境変数を設定してください。
-
-## 開発フロー
-
-devcontainerを利用して開発
-
-左下の「><」アイコンをクリックし、「Reopen in Container」を選択
-
-### Windowsで開発する場合
-
-デフォルトでGPUが無効になっている。正確にはCPU環境で動作する設定になっている
-
-GPU環境でのテストをしたい場合は、`devcontainer.json`の`dockerComposeFile`を適切に変更すること
-
-## 補足
-
-- Python 3.11で開発
-  - 一部ライブラリが3.12以降で非推奨になったため

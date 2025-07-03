@@ -8,12 +8,17 @@ RUN apt-get update \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+WORKDIR /app
+
 COPY requirements.txt .
 
-# ビルド引数としてGITHUB_PATを定義
 ARG GITHUB_PAT
+RUN if [ -n "$GITHUB_PAT" ]; then \
+    git config --global url."https://${GITHUB_PAT}@github.com".insteadOf "https://github.com"; \
+    fi
 
-# GITHUB_PATを使ってgithub.comを置換
-RUN sed -i "s/github.com/${GITHUB_PAT}@github.com/g" requirements.txt
+RUN python3 -m pip install --upgrade pip \
+    && python3 -m pip install -r requirements.txt
 
-RUN pip install -r requirements.txt
+ENTRYPOINT [ "python3" ]
+CMD [ "main.py" ]

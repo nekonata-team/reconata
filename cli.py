@@ -53,7 +53,12 @@ def websocket(
     ] = "0.0.0.0",
     port: Annotated[
         int,
-        typer.Option("--port", help="WebSocketサーバーのポート番号"),
+        typer.Option(
+            "--port",
+            help="WebSocketサーバーのポート番号",
+            min=1,
+            max=65535,
+        ),
     ] = 9876,
     model_size: Annotated[
         str,
@@ -73,10 +78,15 @@ def websocket(
     ] = "int8",
     beam_size: Annotated[
         int,
-        typer.Option("--beam-size", help="ビームサイズ"),
+        typer.Option("--beam-size", help="ビームサイズ", min=1),
     ] = 5,
+    batch_size: Annotated[
+        int,
+        typer.Option("--batch-size", help="バッチサイズ", min=1),
+    ] = 8,
     hotwords: Annotated[
-        str, typer.Option("--hotwords", help="ホットワード")
+        str,
+        typer.Option("--hotwords", help="ホットワード"),
     ] = "nekonata",
 ) -> None:
     """WebSocketトランスクライバーサーバーを起動"""
@@ -86,6 +96,7 @@ def websocket(
         cast(FasterWhisperModelSize, model_size),
         cast(ComputeType, compute_type),
         beam_size,
+        batch_size,
         hotwords,
     )
 

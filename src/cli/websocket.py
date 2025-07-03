@@ -16,6 +16,7 @@ def handle_websocket_command(
     model_size: FasterWhisperModelSize,
     compute_type: ComputeType,
     beam_size: int,
+    batch_size: int,
     hotwords: str,
 ) -> None:
     typer.echo("WebSocketトランスクライバーサーバーを起動中...")
@@ -27,6 +28,7 @@ def handle_websocket_command(
         model_size=model_size,
         compute_type=compute_type,
         beam_size=beam_size,
+        batch_size=batch_size,
         hotwords=hotwords,
     )
 

@@ -44,7 +44,7 @@ def _send_messages_to_channel(
     mixed_audio_path: Path,
     context_path: Path,
 ) -> None:
-    container.mode.override(Mode.MINUTE)
+    container.config.mode.override(Mode.MINUTE)
 
     context = context_path.read_text(encoding="utf-8")
 

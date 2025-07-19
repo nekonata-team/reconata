@@ -36,3 +36,4 @@ def get_attendees_ids_string(attendees: Attendees) -> str:
     if not attendees:
         return "参加者がいません。"
     return "\n".join(f"- `{user_id}`" for user_id in attendees.keys())
+

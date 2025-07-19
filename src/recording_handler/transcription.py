@@ -7,6 +7,7 @@ import discord
 from nekomeeta.transcriber.transcriber import IterableTranscriber, Transcriber
 
 from src.bot.attendee import Attendees
+from src.recording_handler.part import save_transcription
 
 from .common import create_path_builder, get_attendees_ids_string, mix, save_all_audio
 from .message_data import (
@@ -78,24 +79,8 @@ class TranscriptionRecordingHandler(RecordingHandler):
 
         try:
             transcription_path = path_builder.transcription()
-
-            if isinstance(self.transcriber, IterableTranscriber):
-                lines, messages = self._transcribe_iter(
-                    mixed_file_path,
-                )
-                async for message in messages:
-                    yield message
-                transcription = "\n".join(lines)
-                with open(transcription_path, "w", encoding="utf-8") as f:
-                    f.write(transcription)
-
-            else:
-                transcription, messages = self._transcribe_and_save(
-                    mixed_file_path,
-                    transcription_path,
-                )
-                async for message in messages:
-                    yield message
+            async for message in save_transcription(mixed_file_path, transcription_path, self.transcriber):
+                yield message
         except Exception as e:
             yield SendThreadData(
                 embed=discord.Embed(description=f"文字起こしに失敗しました: {e}")
@@ -105,44 +90,3 @@ class TranscriptionRecordingHandler(RecordingHandler):
         yield SendData(
             files=[discord.File(transcription_path, "transcription.txt")],
         )
-
-    def _transcribe_and_save(
-        self,
-        mixed_file_path: Path,
-        transcription_path: Path,
-    ) -> tuple[str, AudioHandlerResult]:
-        transcription = self.transcriber.transcribe(str(mixed_file_path))
-        with open(transcription_path, "w", encoding="utf-8") as f:
-            f.write(transcription)
-
-        async def message_iter():
-            yield SendThreadData(
-                embed=discord.Embed(description="文字起こしが完了しました。")
-            )
-
-        return transcription, message_iter()
-
-    def _transcribe_iter(
-        self,
-        mixed_file_path: Path,
-    ) -> tuple[list[str], AudioHandlerResult]:
-        segments = cast(IterableTranscriber, self.transcriber).transcribe_iter(
-            str(mixed_file_path)
-        )
-        lines: list[str] = []
-
-        async def message_iter():
-            async for segment in segments:
-                lines.append(segment.text)
-                embed = discord.Embed(description="文字起こしの一部が保存されました。")
-                embed.add_field(
-                    name="進捗",
-                    value=f"{segment.end:.2f} s",
-                )
-                embed.add_field(
-                    name="プレビュー",
-                    value=segment.text,
-                )
-                yield EditMessageData(embed=embed)
-
-        return lines, message_iter()

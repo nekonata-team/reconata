@@ -15,11 +15,6 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-ARG GITHUB_PAT
-RUN if [ -n "$GITHUB_PAT" ]; then \
-    git config --global url."https://${GITHUB_PAT}@github.com".insteadOf "https://github.com"; \
-    fi
-
 RUN python3.11 -m pip install --upgrade pip \
     && python3.11 -m pip install -r requirements.txt
 

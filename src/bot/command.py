@@ -62,6 +62,8 @@ async def start(ctx: discord.ApplicationContext):
             sync_start=True,
         )
         await ctx.respond("録音を開始しました。")
+    else:
+        await ctx.respond("チャンネルが見つかりません。")
 
 
 @bot.command(description="録音を停止します")
@@ -80,7 +82,8 @@ async def stop(
     meeting = meetings.get(guild_id)
 
     if meeting is None:
-        return "録音情報がありません。"
+        await ctx.respond("録音は開始されていません。")
+        return
 
     mode_ = Mode(mode)  # 型エラーの対処
     meeting.recording_handler = create_recording_handler(guild_id, mode_)
@@ -89,11 +92,8 @@ async def stop(
         f"Stopping recording in {ctx.channel.name} for guild {ctx.guild.id} with mode {mode_}"
     )
 
-    if meeting is not None:
-        meeting.voice_client.stop_recording()
-        await ctx.respond("録音を停止しました。")
-    else:
-        await ctx.respond("録音は開始されていません。")
+    meeting.voice_client.stop_recording()
+    await ctx.respond("録音を停止しました。")
 
 
 @bot.command(description="現在のパラメータや利用中のコンポーネント情報を表示します。")

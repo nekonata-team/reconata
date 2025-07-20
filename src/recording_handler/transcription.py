@@ -1,21 +1,19 @@
 import asyncio
 from datetime import datetime
 from pathlib import Path
-from typing import cast
 
 import discord
-from nekomeeta.transcriber.transcriber import IterableTranscriber, Transcriber
 
 from src.bot.attendee import Attendees
-from src.recording_handler.part import save_transcription
+from src.transcriber.transcriber import Transcriber
 
 from .common import create_path_builder, get_attendees_ids_string, mix, save_all_audio
 from .message_data import (
     CreateThreadData,
-    EditMessageData,
     SendData,
     SendThreadData,
 )
+from .part import save_transcription
 from .recording_handler import (
     AUDIO_NOT_RECORDED,
     AudioHandlerResult,
@@ -79,7 +77,9 @@ class TranscriptionRecordingHandler(RecordingHandler):
 
         try:
             transcription_path = path_builder.transcription()
-            async for message in save_transcription(mixed_file_path, transcription_path, self.transcriber):
+            async for message in save_transcription(
+                mixed_file_path, transcription_path, self.transcriber
+            ):
                 yield message
         except Exception as e:
             yield SendThreadData(

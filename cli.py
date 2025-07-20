@@ -3,14 +3,14 @@ from typing import Annotated, cast, get_args
 
 import click
 import typer
-from nekomeeta.transcriber.faster_whisper import (
-    ComputeType,
-    FasterWhisperModelSize,
-)
 
 from src.cli.embed import handle_embed_command
 from src.cli.send import handle_send_command
 from src.cli.websocket import handle_websocket_command
+from src.transcriber.faster_whisper import (
+    ComputeType,
+    FasterWhisperModelSize,
+)
 
 app = typer.Typer(help="Discord Bot CLI")
 

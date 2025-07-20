@@ -1,13 +1,18 @@
+from typing import Callable
+
 import discord
-from nekomeeta.post_process.github_push import GitHubPusher
+
+from src.post_process.github_push import GitHubPusher
 
 from ..modal.edit import EditModal
 
+PusherBuilder = Callable[[], GitHubPusher | None]
+
 
 class CommitView(discord.ui.View):
-    def __init__(self, pusher: GitHubPusher):
+    def __init__(self, pusher_builder: PusherBuilder):
         super().__init__(timeout=None)
-        self.pusher = pusher
+        self.pusher_builder = pusher_builder
 
     @discord.ui.button(label="コミット", style=discord.ButtonStyle.primary, emoji="🚀")
     async def commit_button_callback(self, button, interaction: discord.Interaction):
@@ -16,9 +21,19 @@ class CommitView(discord.ui.View):
                 "メッセージが見つかりません。", ephemeral=True
             )
             return
+
+        pusher = self.pusher_builder()
+
+        if pusher is None:
+            await interaction.response.send_message(
+                "GitHubの設定が見つかりません。/parametersから設定してください。",
+                ephemeral=True,
+            )
+            return
+
         await interaction.response.send_message(
-            f"コミットを実行しますか？（{self.pusher.repo_url}）",
-            view=ConfirmView(self.pusher, message),
+            f"コミットを実行しますか？（{pusher.repo_url}）",
+            view=ConfirmView(pusher, message),
             ephemeral=True,
         )
 

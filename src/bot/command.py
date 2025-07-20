@@ -3,10 +3,9 @@ from logging import getLogger
 from typing import cast
 
 import discord
-from nekomeeta.post_process.github_push import GitHubPusher
-from nekomeeta.summarizer.formatter.mdformat import MdFormatSummaryFormatter
 
 from container import container
+from src.post_process.github_push import GitHubPusher
 from src.recording_handler.context_provider import ParametersBaseContextProvider
 from src.recording_handler.message_data import (
     MessageContext,
@@ -15,6 +14,7 @@ from src.recording_handler.minute import MinuteRecordingHandler
 from src.recording_handler.recording_handler import RecordingHandler
 from src.recording_handler.save import SaveToFolderRecordingHandler
 from src.recording_handler.transcription import TranscriptionRecordingHandler
+from src.summarizer.formatter.mdformat import MdFormatSummaryFormatter
 from src.ui.view_builder import CommitViewBuilder, EditViewBuilder
 
 from .attendee import AttendeeData
@@ -149,15 +149,9 @@ def create_recording_handler(guild_id: int, mode: Mode) -> RecordingHandler:
             parameters.prompt_key or PromptKey.DEFAULT
         )
 
-        github = parameters.github
         view_builder = (
-            CommitViewBuilder(
-                GitHubPusher(
-                    repo_url=data.repo_url,
-                    local_repo_path=data.local_repo_path,
-                )
-            )
-            if (data := github)
+            CommitViewBuilder(lambda: _pusher_builder(guild_id))
+            if parameters.github is not None
             else EditViewBuilder()
         )
         context_provider = ParametersBaseContextProvider(parameters)
@@ -173,3 +167,16 @@ def create_recording_handler(guild_id: int, mode: Mode) -> RecordingHandler:
         )
 
     return container.audio_handler()
+
+
+def _pusher_builder(guild_id: int) -> GitHubPusher | None:
+    parameters_repository = container.parameters_repository()
+    parameters = parameters_repository.get_parameters(guild_id=guild_id)
+
+    data = parameters.github
+    if data is None:
+        return None
+    return GitHubPusher(
+        repo_url=data.repo_url,
+        local_repo_path=data.local_repo_path,
+    )

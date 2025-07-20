@@ -1,13 +1,14 @@
 import asyncio
 
 import typer
-from nekomeeta.transcriber.faster_whisper import (
+
+from src.transcriber.faster_whisper import (
     ComputeType,
     FasterWhisperModelSize,
     FasterWhisperTranscriber,
 )
-from nekomeeta.transcriber.transcriber import IterableTranscriber
-from nekomeeta.transcriber.websocket_server import WebSocketIterableTranscriberServer
+from src.transcriber.transcriber import IterableTranscriber
+from src.transcriber.websocket_server import WebSocketIterableTranscriberServer
 
 
 def handle_websocket_command(

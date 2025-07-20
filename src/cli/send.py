@@ -6,10 +6,11 @@ import typer
 from container import container
 from src.bot.command import bot, create_recording_handler
 from src.bot.enums import Mode
-from src.cli.utils import parse_discord_channel_url
 from src.recording_handler.common import create_path_builder
 from src.recording_handler.message_data import MessageContext, SendData
 from src.recording_handler.minute import MinuteRecordingHandler
+
+from .utils import parse_discord_channel_url
 
 
 def handle_send_command(

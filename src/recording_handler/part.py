@@ -2,10 +2,11 @@ import time
 from pathlib import Path
 
 import discord
-from nekomeeta.transcriber.transcriber import IterableTranscriber, Transcriber
 
-from src.recording_handler.message_data import EditMessageData, SendThreadData
-from src.recording_handler.recording_handler import AudioHandlerResult
+from src.transcriber.transcriber import IterableTranscriber, Transcriber
+
+from .message_data import EditMessageData, SendThreadData
+from .recording_handler import AudioHandlerResult
 
 
 async def save_transcription(

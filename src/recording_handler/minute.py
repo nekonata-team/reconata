@@ -4,15 +4,14 @@ from logging import getLogger
 from pathlib import Path
 
 import discord
-from nekomeeta.summarizer.formatter.summary_formatter import SummaryFormatter
-from nekomeeta.summarizer.prompt_provider.summarize_prompt_provider import (
-    ContextualSummarizePromptProvider,
-)
-from nekomeeta.summarizer.summarizer import Summarizer
-from nekomeeta.transcriber.transcriber import IterableTranscriber, Transcriber
 
 from src.bot.attendee import Attendees
-from src.recording_handler.part import save_transcription
+from src.summarizer.formatter.summary_formatter import SummaryFormatter
+from src.summarizer.prompt_provider.summarize_prompt_provider import (
+    ContextualSummarizePromptProvider,
+)
+from src.summarizer.summarizer import Summarizer
+from src.transcriber.transcriber import IterableTranscriber, Transcriber
 from src.ui.view_builder import ViewBuilder
 
 from .common import create_path_builder, mix, save_all_audio
@@ -22,6 +21,7 @@ from .message_data import (
     SendData,
     SendThreadData,
 )
+from .part import save_transcription
 from .path_builder import PathBuilder
 from .recording_handler import (
     AUDIO_NOT_RECORDED,

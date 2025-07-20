@@ -1,16 +1,16 @@
 from dependency_injector import containers, providers
 from dotenv import load_dotenv
-from nekomeeta.summarizer.gemini import GeminiSummarizer
-from nekomeeta.summarizer.prompt_provider.obsidian import (
-    ObsidianSummarizePromptProvider,
-)
-from nekomeeta.summarizer.prompt_provider.structured_markdown import (
-    StructuredMarkdownSummarizePromptProvider,
-)
-from nekomeeta.transcriber.faster_whisper import FasterWhisperTranscriber
 
 from src.bot.enums import PromptKey
 from src.parameters_repository.tinydb import TinyDBParametersRepository
+from src.summarizer.gemini import GeminiSummarizer
+from src.summarizer.prompt_provider.obsidian import (
+    ObsidianSummarizePromptProvider,
+)
+from src.summarizer.prompt_provider.structured_markdown import (
+    StructuredMarkdownSummarizePromptProvider,
+)
+from src.transcriber.faster_whisper import FasterWhisperTranscriber
 
 load_dotenv()
 

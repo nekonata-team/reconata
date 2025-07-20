@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 
 import discord
-from nekomeeta.post_process.github_push import GitHubPusher
+
+from .view.commit import PusherBuilder
 
 
 class ViewBuilder(ABC):
@@ -10,13 +11,13 @@ class ViewBuilder(ABC):
 
 
 class CommitViewBuilder(ViewBuilder):
-    def __init__(self, pusher: GitHubPusher):
-        self.pusher = pusher
+    def __init__(self, pusher_builder: PusherBuilder):
+        self.pusher_builder = pusher_builder
 
     def create_view(self) -> discord.ui.View:
         from .view.commit import CommitView
 
-        return CommitView(pusher=self.pusher)
+        return CommitView(pusher_builder=self.pusher_builder)
 
 
 class EditViewBuilder(ViewBuilder):

@@ -3,8 +3,8 @@
         "dotenv",
         "hotwords",
         "invitable",
-        "nekomeeta",
-        "Nekonata"
+        "Nekonata",
+        "reconata",
     ],
     "python.analysis.autoImportCompletions": true,
     "editor.formatOnSave": true,

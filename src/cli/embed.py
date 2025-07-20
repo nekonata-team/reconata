@@ -4,7 +4,8 @@ import discord
 import typer
 
 from container import container
-from src.cli.utils import parse_message_url
+
+from .utils import parse_message_url
 
 
 def handle_embed_command(message_url: str) -> None:

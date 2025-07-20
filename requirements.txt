@@ -1,6 +1,13 @@
+openai-whisper @ git+https://github.com/openai/whisper.git
+openai>=1.65.5
+google-genai>=1.5.0
+git-python>=1.0.3
+huggingface-hub>=0.29.3
+# llama-cpp-python>=0.3.7
+faster-whisper>=1.1.1
+mdformat>=0.7.22
 dependency-injector>=4.47.1
-dotenv>=0.9.9
-nekomeeta @ git+https://github.com/nekonata-team/nekomeeta.git@f4387efd11fdf5ca1e5445402aefd1baef0c9416
+python-dotenv>=1.0.1
 py-cord[voice]>=2.6.1
 pydub>=0.25.1
 pynacl>=1.5.0

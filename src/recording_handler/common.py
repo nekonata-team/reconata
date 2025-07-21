@@ -26,7 +26,7 @@ def save_all_audio(path_builder: PathBuilder, attendees: Attendees) -> list[Path
 
     for user_id, data in attendees.items():
         file_path = path_builder.user_audio(user_id)
-        data.format(file_path)
+        data.convert(file_path)
         output_files.append(file_path)
 
     return output_files
@@ -36,4 +36,3 @@ def get_attendees_ids_string(attendees: Attendees) -> str:
     if not attendees:
         return "参加者がいません。"
     return "\n".join(f"- `{user_id}`" for user_id in attendees.keys())
-

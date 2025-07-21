@@ -116,16 +116,14 @@ async def on_finish_recording(sink: FileSink, channel: discord.TextChannel):
     if meeting is None:
         return
 
-    if meeting.recording_handler is None:
-        return
+    if (handler := meeting.recording_handler) is not None:
+        attendees = {user: AttendeeData(file) for user, file in sink.audio_data.items()}
 
-    attendees = {user: AttendeeData(file) for user, file in sink.audio_data.items()}
+        context = MessageContext(channel=channel)
 
-    context = MessageContext(channel=channel)
+        async for data in handler(attendees):
+            await data.effect(context)
 
-    async for data in meeting.recording_handler(attendees):
-        await data.effect(context)
-    # clean up
     del meetings[channel.guild.id]
 
 

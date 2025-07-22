@@ -3,8 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.gpu
-      args:
-        GITHUB_PAT: ${GITHUB_PAT}
     env_file:
       - .env
     volumes:
@@ -23,8 +21,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.gpu
-      args:
-        GITHUB_PAT: ${GITHUB_PAT}
     env_file:
       - .env
     volumes:

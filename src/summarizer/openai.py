@@ -18,13 +18,20 @@ class OpenAISummarizer(Summarizer):
         self.summarize_prompt_provider = summarize_prompt_provider
 
     def generate_meeting_notes(self, transcription: str) -> str:
-        prompt = self.summarize_prompt_provider.get_prompt(transcription)
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "あなたは優秀な議事録作成者です。"},
-                    {"role": "user", "content": prompt},
+                    {
+                        "role": "system",
+                        "content": self.summarize_prompt_provider.get_system_prompt(),
+                    },
+                    {
+                        "role": "user",
+                        "content": self.summarize_prompt_provider.get_prompt(
+                            transcription
+                        ),
+                    },
                 ],
             )
             content = response.choices[0].message.content

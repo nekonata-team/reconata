@@ -1,4 +1,5 @@
 from google.genai import Client
+from google.genai.types import GenerateContentConfig
 
 from .prompt_provider.summarize_prompt_provider import SummarizePromptProvider
 from .summarizer import Summarizer
@@ -18,10 +19,13 @@ class GeminiSummarizer(Summarizer):
         self.model = model
 
     def generate_meeting_notes(self, transcription: str) -> str:
-        prompt = self.summarize_prompt_provider.get_prompt(transcription)
         try:
             response = self.client.models.generate_content(
-                model=self.model, contents=prompt
+                model=self.model,
+                contents=self.summarize_prompt_provider.get_prompt(transcription),
+                config=GenerateContentConfig(
+                    system_instruction=self.summarize_prompt_provider.get_system_prompt()
+                ),
             )
             content = response.text
             if content is None:

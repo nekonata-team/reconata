@@ -5,6 +5,7 @@ build/
 dist/
 wheels/
 *.egg-info
+*.ipynb
 
 .env
 .DS_Store

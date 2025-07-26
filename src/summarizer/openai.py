@@ -11,7 +11,7 @@ class OpenAISummarizer(Summarizer):
         self,
         api_key: str,
         summarize_prompt_provider: SummarizePromptProvider,
-        model: str = "gpt-4o",
+        model: str = "gpt-4.1-nano",
     ):
         self.client = OpenAI(api_key=api_key)
         self.model = model

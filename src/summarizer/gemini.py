@@ -11,15 +11,17 @@ class GeminiSummarizer(Summarizer):
         self,
         api_key: str,
         summarize_prompt_provider: SummarizePromptProvider,
+        model: str = "gemini-2.0-flash",
     ):
         self.client = Client(api_key=api_key)
         self.summarize_prompt_provider = summarize_prompt_provider
+        self.model = model
 
     def generate_meeting_notes(self, transcription: str) -> str:
         prompt = self.summarize_prompt_provider.get_prompt(transcription)
         try:
             response = self.client.models.generate_content(
-                model="gemini-2.0-flash", contents=prompt
+                model=self.model, contents=prompt
             )
             content = response.text
             if content is None:

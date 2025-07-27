@@ -16,7 +16,8 @@
                 "mosapride.zenkaku",
                 "shardulm94.trailing-spaces",
                 "sukumo28.wav-preview",
-                "ms-azuretools.vscode-docker"
+                "ms-azuretools.vscode-docker",
+                "ms-toolsai.jupyter"
             ]
         }
     },

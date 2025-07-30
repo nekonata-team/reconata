@@ -153,11 +153,11 @@ class MinuteRecordingHandler(RecordingHandler):
         context: str,
     ) -> tuple[str, AudioHandlerResult]:
         self.summarize_prompt_provider.additional_context = context
-        summary = self.summarizer.generate_meeting_notes(transcription)
+        summary_content = self.summarizer.generate_meeting_notes(transcription).content
         with open(summary_path, "w", encoding="utf-8") as f:
-            f.write(summary)
+            f.write(summary_content)
         embed = discord.Embed(
-            description=summary,
+            description=summary_content,
             timestamp=datetime.now(),
         )
 
@@ -166,7 +166,7 @@ class MinuteRecordingHandler(RecordingHandler):
                 embed=embed,
             )
 
-        return summary, message_iter()
+        return summary_content, message_iter()
 
     def _create_final_send_data(
         self,

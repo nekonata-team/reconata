@@ -5,7 +5,7 @@ class ObsidianSummarizePromptProvider(ContextualSummarizePromptProvider):
     """Obsidian 用の議事録フォーマットのプロンプトを提供する具象クラス"""
 
     def get_system_prompt(self) -> str:
-        return "あなたは優秀な議事録作成者です。ユーザーから指定されたフォーマットと文字起こしなどの情報から、マークダウンで議事録を作成してください。議事録以外の内容は出力しないこと。"
+        return "あなたは優秀な議事録作成者です。ユーザーから指定されたフォーマットと文字起こしなどの情報から、マークダウンで議事録を作成してください。マークダウン以外の内容は出力しないこと。"
 
     def get_prompt(self, transcription: str) -> str:
         prompt = f"""【フォーマット】

@@ -1,7 +1,7 @@
 from openai import OpenAI
 
 from .prompt_provider.summarize_prompt_provider import SummarizePromptProvider
-from .summarizer import Summarizer
+from .summarizer import Summarizer, Summary
 
 
 class OpenAISummarizer(Summarizer):
@@ -17,26 +17,31 @@ class OpenAISummarizer(Summarizer):
         self.model = model
         self.summarize_prompt_provider = summarize_prompt_provider
 
-    def generate_meeting_notes(self, transcription: str) -> str:
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": self.summarize_prompt_provider.get_system_prompt(),
-                    },
-                    {
-                        "role": "user",
-                        "content": self.summarize_prompt_provider.get_prompt(
-                            transcription
-                        ),
-                    },
-                ],
-            )
-            content = response.choices[0].message.content
-            if content is None:
-                raise RuntimeError("OpenAI API の応答が無効です")
-            return content
-        except Exception as e:
-            raise RuntimeError("OpenAI API を用いた議事録作成に失敗しました") from e
+    def generate_meeting_notes(self, transcription: str) -> Summary:
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": self.summarize_prompt_provider.get_system_prompt(),
+                },
+                {
+                    "role": "user",
+                    "content": self.summarize_prompt_provider.get_prompt(transcription),
+                },
+            ],
+        )
+        content = response.choices[0].message.content
+        if content is None:
+            raise RuntimeError("コンテンツが返されませんでした")
+
+        usage = response.usage
+
+        input_token_count = usage.prompt_tokens if usage is not None else None
+        output_token_count = usage.completion_tokens if usage is not None else None
+
+        return Summary(
+            content=content,
+            input_token_count=input_token_count or 0,
+            output_token_count=output_token_count or 0,
+        )

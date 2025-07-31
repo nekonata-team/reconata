@@ -4,9 +4,9 @@ from pathlib import Path
 
 import discord
 
-from src.bot.attendee import Attendees
 from src.transcriber.transcriber import Transcriber
 
+from .attendee import Attendees
 from .common import create_path_builder, get_attendees_ids_string, mix, save_all_audio
 from .message_data import (
     CreateThreadData,

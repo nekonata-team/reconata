@@ -2,9 +2,9 @@ from datetime import datetime
 from logging import getLogger
 from pathlib import Path
 
-from src.bot.attendee import Attendees
 from src.mixer.ffmpeg import FFmpegMixer
 
+from .attendee import Attendees
 from .path_builder import PathBuilder
 
 logger = getLogger(__name__)

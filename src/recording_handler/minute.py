@@ -5,7 +5,6 @@ from pathlib import Path
 
 import discord
 
-from src.bot.attendee import Attendees
 from src.summarizer.formatter.summary_formatter import SummaryFormatter
 from src.summarizer.prompt_provider.summarize_prompt_provider import (
     ContextualSummarizePromptProvider,
@@ -14,6 +13,7 @@ from src.summarizer.summarizer import Summarizer
 from src.transcriber.transcriber import IterableTranscriber, Transcriber
 from src.ui.view_builder import ViewBuilder
 
+from .attendee import Attendees
 from .common import create_path_builder, mix, save_all_audio
 from .context_provider import ContextProvider
 from .message_data import (

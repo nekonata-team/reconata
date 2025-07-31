@@ -1,8 +1,7 @@
 import asyncio
 from pathlib import Path
 
-from src.bot.attendee import Attendees
-
+from .attendee import Attendees
 from .common import create_path_builder, get_attendees_ids_string, save_all_audio
 from .message_data import SendData
 from .recording_handler import (

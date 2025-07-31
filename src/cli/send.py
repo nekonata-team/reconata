@@ -4,7 +4,8 @@ import discord
 import typer
 
 from container import container
-from src.bot.command import bot, create_recording_handler
+from src.bot.application.meeting import create_recording_handler
+from src.bot.command import bot
 from src.bot.enums import Mode
 from src.recording_handler.common import create_path_builder
 from src.recording_handler.message_data import MessageContext, SendData

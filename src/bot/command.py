@@ -61,7 +61,7 @@ async def stop(
     guild_id = ctx.guild.id
     mode_ = cast(Mode, mode)
     try:
-        meeting_service.stop_meeting(guild_id, mode_)
+        meeting_service.stop_meeting(guild_id, mode_, ctx.channel)
     except MeetingNotFoundError:
         await ctx.respond("録音が開始されていません。")
         return

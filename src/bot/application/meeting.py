@@ -25,6 +25,7 @@ logger = getLogger(__name__)
 class Meeting:
     voice_client: discord.VoiceClient
     recording_handler: RecordingHandler | None = None
+    text_channel: discord.TextChannel | None = None  # used for logging or notifications
 
 
 class MeetingAlreadyExistsError(Exception):
@@ -39,45 +40,53 @@ class MeetingService:
     def __init__(self):
         self.meetings: dict[int, Meeting] = {}
 
-    async def start_meeting(self, channel: discord.VoiceChannel):
-        guild_id = channel.guild.id
+    async def start_meeting(self, voice_channel: discord.VoiceChannel):
+        guild_id = voice_channel.guild.id
 
         if guild_id in self.meetings:
             raise MeetingAlreadyExistsError(
                 f"Meeting already exists for guild {guild_id}"
             )
-        vc = await channel.connect()
+        vc = await voice_channel.connect()
         self.meetings[guild_id] = Meeting(voice_client=vc)
-        logger.info(f"Starting recording in {channel.name} for guild {guild_id}")
+        logger.info(f"Starting recording in {voice_channel.name} for guild {guild_id}")
         vc.start_recording(
             FileSink(),
             self.on_finish_recording,
-            channel,
+            guild_id,
             sync_start=True,
         )
 
-    def stop_meeting(self, guild_id, mode: Mode):
+    def stop_meeting(
+        self,
+        guild_id: int,
+        mode: Mode,
+        text_channel: discord.TextChannel,
+    ):
         meeting = self.meetings.get(guild_id)
 
         if meeting is None:
             raise MeetingNotFoundError(f"No meeting exists for guild {guild_id}")
 
         meeting.recording_handler = create_recording_handler(guild_id, mode)
+        meeting.text_channel = text_channel
 
         logger.info(f"Stopping recording for guild {guild_id} with mode {mode}")
 
         meeting.voice_client.stop_recording()  # This will call `on_finish_recording`
         meeting = self.meetings[guild_id]
 
-    async def on_finish_recording(self, sink: FileSink, channel: discord.TextChannel):
+    async def on_finish_recording(self, sink: FileSink, guild_id: int):
         await sink.vc.disconnect()
 
-        meeting = self.meetings.get(channel.guild.id)
+        meeting = self.meetings.get(guild_id)
 
         if meeting is None:
             return
 
-        if (handler := meeting.recording_handler) is not None:
+        if (handler := meeting.recording_handler) is not None and (
+            channel := meeting.text_channel
+        ) is not None:
             attendees = {
                 user: AttendeeData(file) for user, file in sink.audio_data.items()
             }
@@ -86,8 +95,12 @@ class MeetingService:
 
             async for data in handler(attendees):
                 await data.effect(context)
+        else:
+            raise ValueError(
+                f"Recording handler or text channel not set for guild {guild_id}"
+            )
 
-        del self.meetings[channel.guild.id]
+        del self.meetings[guild_id]
 
 
 def create_recording_handler(guild_id: int, mode: Mode) -> RecordingHandler:

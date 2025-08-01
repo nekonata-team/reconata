@@ -98,14 +98,11 @@ def create_recording_handler(guild_id: int, mode: Mode) -> RecordingHandler:
     parameters = parameters_repository.get_parameters(guild_id)
 
     if mode == Mode.TRANSCRIPTION:
-        container.config.hotwords.override(parameters.hotwords)
-
         return TranscriptionRecordingHandler(
             transcriber=container.transcriber(),
         )
 
     if mode == Mode.MINUTE:
-        container.config.hotwords.override(parameters.hotwords)
         container.config.summarize_prompt_key.override(
             parameters.prompt_key or PromptKey.DEFAULT
         )

@@ -49,4 +49,17 @@ def create_parameters_embed(guild_id: int) -> discord.Embed:
     else:
         embed.add_field(name="ユーザー名マッピング", value="未設定", inline=False)
 
+    # スケジュール
+    if params.schedules:
+        schedule_lines = [
+            f"<#{s.channel_id}>: {s.schedule.to_string()}" for s in params.schedules
+        ]
+        embed.add_field(
+            name="スケジュール",
+            value="\n".join(schedule_lines) if schedule_lines else "なし",
+            inline=False,
+        )
+    else:
+        embed.add_field(name="スケジュール", value="なし", inline=False)
+
     return embed

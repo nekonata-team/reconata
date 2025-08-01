@@ -32,7 +32,6 @@ class Container(containers.DeclarativeContainer):
         model_size=config.model_size,
         beam_size=config.beam_size,
         batch_size=config.batch_size,
-        hotwords=config.hotwords,
     )
     summarizer = providers.Singleton(
         OpenAISummarizer,

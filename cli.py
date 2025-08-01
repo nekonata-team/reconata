@@ -84,10 +84,6 @@ def websocket(
         int,
         typer.Option("--batch-size", help="バッチサイズ", min=1),
     ] = 8,
-    hotwords: Annotated[
-        str,
-        typer.Option("--hotwords", help="ホットワード"),
-    ] = "nekonata",
 ) -> None:
     """WebSocketトランスクライバーサーバーを起動"""
     handle_websocket_command(
@@ -97,7 +93,6 @@ def websocket(
         cast(ComputeType, compute_type),
         beam_size,
         batch_size,
-        hotwords,
     )
 
 

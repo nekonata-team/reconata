@@ -1,7 +1,12 @@
+from datetime import datetime
 from logging import getLogger
 from typing import cast
+from zoneinfo import ZoneInfo
 
 import discord
+from discord.ext import tasks
+
+from container import container
 
 from .application.meeting import (
     MeetingAlreadyExistsError,
@@ -73,3 +78,46 @@ async def parameters(ctx: discord.ApplicationContext):
     embed = create_parameters_embed(ctx.guild.id)
     view = EditParametersView(ctx.guild.id)
     await ctx.respond(embed=embed, view=view)
+
+
+@tasks.loop(minutes=1)
+async def check_schedules():
+    """定期的にスケジュールをチェックし、必要であればミーティングを開始します。"""
+    logger.info("Checking schedules...")
+    for guild in bot.guilds:
+        parameters = container.parameters_repository().get_parameters(guild.id)
+        schedules = parameters.schedules
+
+        now = datetime.now().astimezone(ZoneInfo("Asia/Tokyo"))
+        for schedule in schedules:
+            if schedule.schedule.should_run(now):
+                try:
+                    channel = guild.get_channel(schedule.channel_id)
+                    if channel is None or not isinstance(channel, discord.VoiceChannel):
+                        logger.warning(
+                            "Channel %s not found or not a voice channel in guild %s",
+                            schedule.channel_id,
+                            guild.id,
+                        )
+                        continue
+                    await meeting_service.start_meeting(channel)
+                except MeetingAlreadyExistsError:
+                    logger.info(
+                        "Meeting already exists for channel %s in guild %s",
+                        schedule.channel_id,
+                        guild.id,
+                    )
+                except Exception as e:
+                    logger.error(
+                        "Error starting meeting for channel %s in guild %s: %s",
+                        schedule.channel_id,
+                        guild.id,
+                        e,
+                    )
+    logger.info("Finished checking schedules.")
+
+
+@bot.event
+async def on_ready():
+    logger.info(f"Logged in as {bot.user}")
+    check_schedules.start()

@@ -18,7 +18,6 @@ def handle_websocket_command(
     compute_type: ComputeType,
     beam_size: int,
     batch_size: int,
-    hotwords: str,
 ) -> None:
     typer.echo("WebSocketトランスクライバーサーバーを起動中...")
     typer.echo(f"ホスト: {host}")
@@ -30,7 +29,6 @@ def handle_websocket_command(
         compute_type=compute_type,
         beam_size=beam_size,
         batch_size=batch_size,
-        hotwords=hotwords,
     )
 
     asyncio.run(_run_server(transcriber, host, port))

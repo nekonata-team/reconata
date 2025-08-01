@@ -38,7 +38,7 @@ class SchedulerService:
     async def _run(self):
         now = datetime.now().astimezone(self.TZ)
 
-        logger.info(f"Checking schedules for {now.strftime('%Y-%m-%d %H:%M:%S')}...")
+        logger.debug(f"Checking schedules for {now.strftime('%Y-%m-%d %H:%M:%S')}...")
 
         for guild in self.bot.guilds:
             parameters = self.parameters_repository.get_parameters(guild.id)
@@ -46,7 +46,7 @@ class SchedulerService:
                 if schedule.schedule.should_run(now):
                     await self._handle_schedule(guild, schedule.channel_id)
 
-        logger.info("Finished checking schedules.")
+        logger.debug("Finished checking schedules.")
 
     async def _handle_schedule(self, guild: discord.Guild, channel_id: int):
         channel = guild.get_channel(channel_id)

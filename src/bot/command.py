@@ -1,4 +1,5 @@
-from datetime import datetime
+import asyncio
+from datetime import datetime, timedelta
 from logging import getLogger
 from typing import cast
 from zoneinfo import ZoneInfo
@@ -14,6 +15,8 @@ from .application.meeting import (
     MeetingService,
 )
 from .enums import Mode
+
+TZ = ZoneInfo("Asia/Tokyo")
 
 logger = getLogger(__name__)
 
@@ -88,7 +91,7 @@ async def check_schedules():
         parameters = container.parameters_repository().get_parameters(guild.id)
         schedules = parameters.schedules
 
-        now = datetime.now().astimezone(ZoneInfo("Asia/Tokyo"))
+        now = datetime.now().astimezone(TZ)
         for schedule in schedules:
             if schedule.schedule.should_run(now):
                 try:
@@ -120,4 +123,12 @@ async def check_schedules():
 @bot.event
 async def on_ready():
     logger.info(f"Logged in as {bot.user}")
+    now = datetime.now().astimezone(TZ)
+    delay = (
+        timedelta(minutes=1)
+        - timedelta(seconds=now.second, microseconds=now.microsecond)
+    ).total_seconds()
+
+    logger.info(f"Scheduling check_schedules to start in {delay} seconds.")
+    await asyncio.sleep(delay)
     check_schedules.start()

@@ -1,28 +1,22 @@
-import asyncio
-from datetime import datetime, timedelta
 from logging import getLogger
 from typing import cast
-from zoneinfo import ZoneInfo
 
 import discord
-from discord.ext import tasks
-
-from container import container
 
 from .application.meeting import (
     MeetingAlreadyExistsError,
     MeetingNotFoundError,
     MeetingService,
 )
+from .application.scheduler import SchedulerService
 from .enums import Mode
-
-TZ = ZoneInfo("Asia/Tokyo")
 
 logger = getLogger(__name__)
 
 bot = discord.Bot()
 
 meeting_service = MeetingService()
+scheduler_service = SchedulerService(bot, meeting_service)
 
 
 @bot.command(
@@ -83,52 +77,7 @@ async def parameters(ctx: discord.ApplicationContext):
     await ctx.respond(embed=embed, view=view)
 
 
-@tasks.loop(minutes=1)
-async def check_schedules():
-    """定期的にスケジュールをチェックし、必要であればミーティングを開始します。"""
-    logger.info("Checking schedules...")
-    for guild in bot.guilds:
-        parameters = container.parameters_repository().get_parameters(guild.id)
-        schedules = parameters.schedules
-
-        now = datetime.now().astimezone(TZ)
-        for schedule in schedules:
-            if schedule.schedule.should_run(now):
-                try:
-                    channel = guild.get_channel(schedule.channel_id)
-                    if channel is None or not isinstance(channel, discord.VoiceChannel):
-                        logger.warning(
-                            "Channel %s not found or not a voice channel in guild %s",
-                            schedule.channel_id,
-                            guild.id,
-                        )
-                        continue
-                    await meeting_service.start_meeting(channel)
-                except MeetingAlreadyExistsError:
-                    logger.info(
-                        "Meeting already exists for channel %s in guild %s",
-                        schedule.channel_id,
-                        guild.id,
-                    )
-                except Exception as e:
-                    logger.error(
-                        "Error starting meeting for channel %s in guild %s: %s",
-                        schedule.channel_id,
-                        guild.id,
-                        e,
-                    )
-    logger.info("Finished checking schedules.")
-
-
 @bot.event
 async def on_ready():
     logger.info(f"Logged in as {bot.user}")
-    now = datetime.now().astimezone(TZ)
-    delay = (
-        timedelta(minutes=1)
-        - timedelta(seconds=now.second, microseconds=now.microsecond)
-    ).total_seconds()
-
-    logger.info(f"Scheduling check_schedules to start in {delay} seconds.")
-    await asyncio.sleep(delay)
-    check_schedules.start()
+    await scheduler_service.start()

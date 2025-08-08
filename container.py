@@ -37,6 +37,7 @@ class Container(containers.DeclarativeContainer):
         OpenAISummarizer,
         api_key=config.openai_api_key,
         summarize_prompt_provider=prompt_provider,
+        model=config.openai_model,
     )
     parameters_repository = providers.Singleton(TinyDBParametersRepository)
 
@@ -44,6 +45,7 @@ class Container(containers.DeclarativeContainer):
 container = Container()
 container.config.google_api_key.from_env("GOOGLE_API_KEY", required=True)
 container.config.openai_api_key.from_env("OPENAI_API_KEY", required=True)
+container.config.openai_model.from_env("OPENAI_MODEL", default="gpt-5-nano")
 container.config.model_size.from_env("MODEL_SIZE", default="small")
 container.config.beam_size.from_env("BEAM_SIZE", default=5, as_=int)
 container.config.batch_size.from_env("BATCH_SIZE", default=8, as_=int)

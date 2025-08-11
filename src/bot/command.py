@@ -1,4 +1,5 @@
 from logging import getLogger
+from os import getenv
 from typing import cast
 
 import discord
@@ -8,15 +9,26 @@ from .application.meeting import (
     MeetingNotFoundError,
     MeetingService,
 )
+from .application.notification import (
+    DiscordNotificationService,
+    NoopNotificationService,
+)
 from .application.scheduler import SchedulerService
 from .enums import Mode
 
 logger = getLogger(__name__)
 
+# Bot
 bot = discord.Bot()
 
+# Services
 meeting_service = MeetingService()
 scheduler_service = SchedulerService(bot, meeting_service)
+notification_service = (
+    DiscordNotificationService(bot, int(channel_id))
+    if (channel_id := getenv("SYSTEM_CHANNEL_ID")) is not None and channel_id.isdigit()
+    else NoopNotificationService()
+)
 
 
 @bot.command(
@@ -80,4 +92,15 @@ async def parameters(ctx: discord.ApplicationContext):
 @bot.event
 async def on_ready():
     logger.info(f"Logged in as {bot.user}")
+    await notification_service.send_ready_notification()
     await scheduler_service.start()
+
+
+@bot.event
+async def on_disconnect():
+    await notification_service.send_disconnect_notification()
+
+
+@bot.event
+async def on_resumed():
+    await notification_service.send_resumed_notification()

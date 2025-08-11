@@ -42,6 +42,7 @@ class SchedulerService:
 
         for guild in self.bot.guilds:
             parameters = self.parameters_repository.get_parameters(guild.id)
+
             for schedule in parameters.schedules:
                 if schedule.schedule.should_run(now):
                     await self._handle_schedule(guild, schedule.channel_id)
@@ -56,7 +57,12 @@ class SchedulerService:
             )
             return
         try:
-            await self.meeting_service.start_meeting(channel)
+            if len(channel.members) > 0:
+                await self.meeting_service.start_meeting(channel)
+            else:
+                logger.info(
+                    f"No members in channel {channel_id} in guild {guild.id}, skipping meeting start"
+                )
         except MeetingAlreadyExistsError:
             logger.info(
                 f"Meeting already exists for channel {channel_id} in guild {guild.id}"

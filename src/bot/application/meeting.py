@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass
 from logging import getLogger
 
@@ -51,7 +52,7 @@ class MeetingService:
         self.meetings[guild_id] = Meeting(voice_client=vc)
         logger.info(f"Starting recording in {voice_channel.name} for guild {guild_id}")
         vc.start_recording(
-            FileSink(),
+            FileSink(loop=asyncio.get_running_loop()),
             self.on_finish_recording,
             guild_id,
             sync_start=True,
@@ -77,6 +78,7 @@ class MeetingService:
         meeting = self.meetings[guild_id]
 
     async def on_finish_recording(self, sink: FileSink, guild_id: int):
+        await sink.close()
         await sink.vc.disconnect()
 
         meeting = self.meetings.get(guild_id)

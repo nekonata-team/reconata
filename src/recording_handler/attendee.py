@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
 
+from discord.types.snowflake import Snowflake
+
 logger = getLogger(__name__)
 
 
@@ -52,4 +54,4 @@ class AttendeeData:
             logger.error(f"Error deleting temporary file {self.temp_file_path}: {e}")
 
 
-Attendees = dict[int, AttendeeData]
+Attendees = dict[Snowflake, AttendeeData]

@@ -79,7 +79,7 @@ def _send_messages_to_channel(
                     await last_message.effect(context)
                 else:
                     print(
-                        "最後のメッセージがSendDataではありません。処理をスキップします。"
+                        f"最後のメッセージがSendDataではありません。処理をスキップします。last_message: {type(last_message)}"
                     )
             except Exception as e:
                 print(f"送信中にエラー: {e}")

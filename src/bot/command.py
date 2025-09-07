@@ -1,3 +1,4 @@
+import asyncio
 from logging import getLogger
 from os import getenv
 from typing import cast
@@ -40,20 +41,38 @@ async def start(ctx: discord.ApplicationContext):
     voice = member.voice
 
     if voice is None:
-        await ctx.respond("ボイスチャンネルに参加してください。")
+        await ctx.followup.send("ボイスチャンネルに参加してください。")
         return
 
     voice = cast(discord.VoiceState, voice)
 
     if (channel := voice.channel) is not None:
+        # 接続・開始が長引くとインタラクションの期限やGW心拍に影響するためタイムアウトを付与
+        timeout_sec = int(getenv("VOICE_CONNECT_TIMEOUT", "20"))
         try:
-            await meeting_service.start_meeting(channel)  # type: ignore
+            await asyncio.wait_for(
+                meeting_service.start_meeting(channel),  # type: ignore
+                timeout=timeout_sec,
+            )
         except MeetingAlreadyExistsError:
-            await ctx.respond("すでに録音が開始されています。")
+            await ctx.followup.send("すでに録音が開始されています。")
             return
-        await ctx.respond("録音を開始しました。")
+        except asyncio.TimeoutError:
+            await ctx.followup.send(
+                f"ボイス接続がタイムアウトしました（{timeout_sec}s）。もう一度お試しください。"
+            )
+            return
+        except discord.Forbidden:
+            await ctx.followup.send("ボイスチャンネルへの接続権限がありません。")
+            return
+        except discord.HTTPException:
+            await ctx.followup.send(
+                "Discord API エラーにより接続に失敗しました。少し待って再試行してください。"
+            )
+            return
+        await ctx.followup.send("録音を開始しました。")
     else:
-        await ctx.respond("チャンネルが見つかりません。")
+        await ctx.followup.send("チャンネルが見つかりません。")
 
 
 @bot.command(description="録音を停止します")
@@ -72,9 +91,9 @@ async def stop(
     try:
         meeting_service.stop_meeting(guild_id, mode_, ctx.channel)
     except MeetingNotFoundError:
-        await ctx.respond("録音が開始されていません。")
+        await ctx.followup.send("録音が開始されていません。")
         return
-    await ctx.respond("録音を停止しました。")
+    await ctx.followup.send("録音を停止しました。")
 
 
 @bot.command(description="現在のパラメータや利用中のコンポーネント情報を表示します。")
@@ -86,14 +105,14 @@ async def parameters(ctx: discord.ApplicationContext):
 
     embed = create_parameters_embed(ctx.guild.id)
     view = EditParametersView(ctx.guild.id)
-    await ctx.respond(embed=embed, view=view)
+    await ctx.followup.send(embed=embed, view=view)
 
 
 @bot.event
 async def on_ready():
     logger.info(f"Logged in as {bot.user}")
-    await notification_service.send_ready_notification()
-    await scheduler_service.start()
+    # await notification_service.send_ready_notification()
+    # await scheduler_service.start()
 
 
 @bot.event

@@ -52,9 +52,15 @@ class FileSink(discord.sinks.Sink):
         # ファイルハンドルの作成（スレッドセーフ）
         self._ensure_file_handle(user)
 
-        # キューへのデータ追加
+        # キューへのデータ追加（別スレッドからの呼び出しを考慮）
         try:
-            self._queue.put_nowait((user, data))
+            if threading.current_thread() is threading.main_thread():
+                self._queue.put_nowait((user, data))
+            else:
+                # イベントループスレッドでputする
+                asyncio.run_coroutine_threadsafe(
+                    self._queue.put((user, data)), self.loop
+                )
         except asyncio.QueueFull:
             logger.warning(f"Audio queue is full. Discarding data for user {user}.")
 

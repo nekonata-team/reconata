@@ -2,6 +2,7 @@ import asyncio
 import os
 import tempfile
 import threading
+import time
 from concurrent.futures import Future
 from logging import getLogger
 from typing import IO
@@ -35,6 +36,9 @@ class FileSink(discord.sinks.Sink):
         self._writer_task_starter: Future | None = None
         self._is_closed = False
 
+        self._bytes_total = 0
+        self._last_packet = 0.0
+
     def write(self, data: bytes, user: Snowflake) -> None:
         """
         書き込みでブロックするとWebsocketのヘルスチェックが失敗する可能性があるため、
@@ -46,11 +50,12 @@ class FileSink(discord.sinks.Sink):
             logger.warning("FileSink is closed. Ignoring write request.")
             return
 
-        # 書き込みタスクの開始（スレッドセーフ）
         self._ensure_writer_task_started()
 
-        # ファイルハンドルの作成（スレッドセーフ）
         self._ensure_file_handle(user)
+
+        self._bytes_total += len(data)
+        self._last_packet = time.monotonic()
 
         # キューへのデータ追加（別スレッドからの呼び出しを考慮）
         try:
@@ -63,6 +68,26 @@ class FileSink(discord.sinks.Sink):
                 )
         except asyncio.QueueFull:
             logger.warning(f"Audio queue is full. Discarding data for user {user}.")
+
+    def metrics(self) -> dict:
+        qsize = self._queue.qsize()
+        return {
+            "files": len(self.audio_data),
+            "queue_size": qsize,
+            "queue_max": self._queue.maxsize,
+            "bytes_total": self._bytes_total,
+            "last_packet": self._last_packet,
+            "writer_state": (
+                "none"
+                if self._writer_task is None
+                else (
+                    "done"
+                    if self._writer_task.done()
+                    else ("cancelled" if self._writer_task.cancelled() else "running")
+                )
+            ),
+            "closed": self._is_closed,
+        }
 
     def _ensure_writer_task_started(self):
         """書き込みタスクの開始を保証する（スレッドセーフ）"""

@@ -71,6 +71,11 @@ async def start(ctx: discord.ApplicationContext):
             )
             return
         await ctx.followup.send("録音を開始しました。")
+        try:
+            if isinstance(ctx.channel, discord.TextChannel):
+                await meeting_service.start_monitoring(ctx.guild.id, ctx.channel)
+        except Exception:
+            pass
     else:
         await ctx.followup.send("チャンネルが見つかりません。")
 

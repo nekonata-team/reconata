@@ -1,6 +1,8 @@
 import asyncio
+import time
 from dataclasses import dataclass
 from logging import getLogger
+from typing import cast
 
 import discord
 
@@ -27,6 +29,11 @@ class Meeting:
     voice_client: discord.VoiceClient
     recording_handler: RecordingHandler | None = None
     text_channel: discord.TextChannel | None = None  # used for logging or notifications
+    sink: FileSink | None = None
+    started_at: float | None = None
+    monitor_task: asyncio.Task | None = None
+    monitor_message: discord.Message | None = None
+    monitor_interval: int = 20
 
 
 class MeetingAlreadyExistsError(Exception):
@@ -49,10 +56,14 @@ class MeetingService:
                 f"Meeting already exists for guild {guild_id}"
             )
         vc = await voice_channel.connect()
-        self.meetings[guild_id] = Meeting(voice_client=vc)
+        meeting = Meeting(voice_client=vc)
+        self.meetings[guild_id] = meeting
         logger.info(f"Starting recording in {voice_channel.name} for guild {guild_id}")
+        sink = FileSink(loop=asyncio.get_running_loop())
+        meeting.sink = sink
+        meeting.started_at = time.monotonic()
         vc.start_recording(
-            FileSink(loop=asyncio.get_running_loop()),
+            sink,
             self.on_finish_recording,
             guild_id,
             sync_start=True,
@@ -102,7 +113,102 @@ class MeetingService:
                 f"Recording handler or text channel not set for guild {guild_id}"
             )
 
-        del self.meetings[guild_id]
+        try:
+            await self._stop_monitoring(guild_id, final=True)
+        finally:
+            del self.meetings[guild_id]
+
+    async def start_monitoring(
+        self, guild_id: int, channel: discord.TextChannel, interval: int = 20
+    ):
+        meeting = self.meetings.get(guild_id)
+        if meeting is None:
+            return
+        meeting.monitor_interval = max(10, min(60, interval))
+        embed = self._build_status_embed(guild_id)
+        msg = await channel.send(embed=embed)
+        meeting.monitor_message = msg
+
+        async def _loop():
+            while True:
+                await asyncio.sleep(meeting.monitor_interval)
+                m = self.meetings.get(guild_id)
+                if m is None:
+                    break
+                try:
+                    await msg.edit(embed=self._build_status_embed(guild_id))
+                except Exception:
+                    break
+
+        meeting.monitor_task = asyncio.create_task(_loop())
+
+    async def _stop_monitoring(self, guild_id: int, final: bool = False):
+        meeting = self.meetings.get(guild_id)
+        if meeting is None:
+            return
+        task = meeting.monitor_task
+        message = meeting.monitor_message
+        meeting.monitor_task = None
+        if task is not None and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        if final and message is not None:
+            try:
+                await message.edit(embed=self._build_status_embed(guild_id))
+            except Exception:
+                pass
+
+    def _build_status_embed(self, guild_id: int) -> discord.Embed:
+        meeting = self.meetings.get(guild_id)
+        title = "🎙️ 録音モニター"
+        color = discord.Color.green()
+        if meeting is None:
+            embed = discord.Embed(title=title, color=discord.Color.red())
+            embed.add_field(name="状態", value="未開始")
+            return embed
+        sink = meeting.sink
+        if sink is None:
+            embed = discord.Embed(title=title, color=discord.Color.red())
+            embed.add_field(name="状態", value="未開始")
+            return embed
+        metrics = sink.metrics()
+        state = "録音中" if not metrics["closed"] else "停止"
+        if metrics["closed"]:
+            color = discord.Color.orange()
+        started = meeting.started_at or time.monotonic()
+        dur = max(0, int(time.monotonic() - started))
+        last = metrics["last_packet"]
+        since = "-" if last == 0 else f"{int(time.monotonic() - last)}s"
+        vc_name = "-"
+        if meeting.voice_client and meeting.voice_client.channel is not None:
+            vc = cast(discord.VoiceChannel, meeting.voice_client.channel)
+            vc_name = getattr(vc, "name", "-")
+        b = metrics["bytes_total"]
+        human = self._human_bytes(b)
+        embed = discord.Embed(title=title, color=color)
+        embed.add_field(name="状態", value=state)
+        embed.add_field(name="経過", value=f"{dur}s")
+        embed.add_field(name="VC", value=vc_name, inline=False)
+        embed.add_field(name="受信ユーザー", value=str(metrics["files"]))
+        embed.add_field(name="データ量", value=human)
+        embed.add_field(name="最終受信", value=since)
+        embed.add_field(
+            name="キュー",
+            value=f"{metrics['queue_size']}/{metrics['queue_max']}",
+        )
+        embed.add_field(name="ライター", value=metrics["writer_state"], inline=False)
+        return embed
+
+    def _human_bytes(self, n: int) -> str:
+        s = float(n)
+        for unit in ["B", "KB", "MB", "GB"]:
+            if s < 1024.0:
+                return f"{s:.1f}{unit}"
+            s /= 1024.0
+        return f"{s:.1f}TB"
 
 
 def create_recording_handler(guild_id: int, mode: Mode) -> RecordingHandler:

@@ -47,8 +47,7 @@ async def start(ctx: discord.ApplicationContext):
     voice = cast(discord.VoiceState, voice)
 
     if (channel := voice.channel) is not None:
-        # 接続・開始が長引くとインタラクションの期限やGW心拍に影響するためタイムアウトを付与
-        timeout_sec = int(getenv("VOICE_CONNECT_TIMEOUT", "20"))
+        timeout_sec = 10
         try:
             await asyncio.wait_for(
                 meeting_service.start_meeting(channel),  # type: ignore
@@ -122,9 +121,11 @@ async def on_ready():
 
 @bot.event
 async def on_disconnect():
-    await notification_service.send_disconnect_notification()
+    # await notification_service.send_disconnect_notification()
+    pass
 
 
 @bot.event
 async def on_resumed():
-    await notification_service.send_resumed_notification()
+    # await notification_service.send_resumed_notification()
+    pass

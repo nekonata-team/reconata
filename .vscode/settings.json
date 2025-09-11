@@ -3,6 +3,7 @@
         "dotenv",
         "hotwords",
         "invitable",
+        "mdformat",
         "Messageable",
         "Nekonata",
         "reconata"

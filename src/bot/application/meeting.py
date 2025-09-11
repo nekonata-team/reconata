@@ -1,8 +1,6 @@
 import asyncio
 import time
-from dataclasses import dataclass
 from logging import getLogger
-from typing import cast
 
 import discord
 
@@ -16,24 +14,14 @@ from src.recording_handler.recording_handler import RecordingHandler
 from src.recording_handler.save import SaveToFolderRecordingHandler
 from src.recording_handler.transcription import TranscriptionRecordingHandler
 from src.summarizer.formatter.mdformat import MdFormatSummaryFormatter
+from src.ui.embeds import create_recording_monitor_embed
 from src.ui.view_builder import CommitViewBuilder, EditViewBuilder
 
+from ..domain.meeting import Meeting
 from ..enums import Mode, PromptKey
 from ..file_sink import FileSink
 
 logger = getLogger(__name__)
-
-
-@dataclass
-class Meeting:
-    voice_client: discord.VoiceClient
-    recording_handler: RecordingHandler | None = None
-    text_channel: discord.TextChannel | None = None  # used for logging or notifications
-    sink: FileSink | None = None
-    started_at: float | None = None
-    monitor_task: asyncio.Task | None = None
-    monitor_message: discord.Message | None = None
-    monitor_interval: int = 20
 
 
 class MeetingAlreadyExistsError(Exception):
@@ -125,7 +113,7 @@ class MeetingService:
         if meeting is None:
             return
         meeting.monitor_interval = max(10, min(60, interval))
-        embed = self._build_status_embed(guild_id)
+        embed = create_recording_monitor_embed(self.meetings.get(guild_id))
         msg = await channel.send(embed=embed)
         meeting.monitor_message = msg
 
@@ -136,7 +124,11 @@ class MeetingService:
                 if m is None:
                     break
                 try:
-                    await msg.edit(embed=self._build_status_embed(guild_id))
+                    await msg.edit(
+                        embed=create_recording_monitor_embed(
+                            self.meetings.get(guild_id)
+                        )
+                    )
                 except Exception:
                     break
 
@@ -157,58 +149,11 @@ class MeetingService:
                 pass
         if final and message is not None:
             try:
-                await message.edit(embed=self._build_status_embed(guild_id))
+                await message.edit(
+                    embed=create_recording_monitor_embed(self.meetings.get(guild_id))
+                )
             except Exception:
                 pass
-
-    def _build_status_embed(self, guild_id: int) -> discord.Embed:
-        meeting = self.meetings.get(guild_id)
-        title = "🎙️ 録音モニター"
-        color = discord.Color.green()
-        if meeting is None:
-            embed = discord.Embed(title=title, color=discord.Color.red())
-            embed.add_field(name="状態", value="未開始")
-            return embed
-        sink = meeting.sink
-        if sink is None:
-            embed = discord.Embed(title=title, color=discord.Color.red())
-            embed.add_field(name="状態", value="未開始")
-            return embed
-        metrics = sink.metrics()
-        state = "録音中" if not metrics["closed"] else "停止"
-        if metrics["closed"]:
-            color = discord.Color.orange()
-        started = meeting.started_at or time.monotonic()
-        dur = max(0, int(time.monotonic() - started))
-        last = metrics["last_packet"]
-        since = "-" if last == 0 else f"{int(time.monotonic() - last)}s"
-        vc_name = "-"
-        if meeting.voice_client and meeting.voice_client.channel is not None:
-            vc = cast(discord.VoiceChannel, meeting.voice_client.channel)
-            vc_name = getattr(vc, "name", "-")
-        b = metrics["bytes_total"]
-        human = self._human_bytes(b)
-        embed = discord.Embed(title=title, color=color)
-        embed.add_field(name="状態", value=state)
-        embed.add_field(name="経過", value=f"{dur}s")
-        embed.add_field(name="VC", value=vc_name, inline=False)
-        embed.add_field(name="受信ユーザー", value=str(metrics["files"]))
-        embed.add_field(name="データ量", value=human)
-        embed.add_field(name="最終受信", value=since)
-        embed.add_field(
-            name="キュー",
-            value=f"{metrics['queue_size']}/{metrics['queue_max']}",
-        )
-        embed.add_field(name="ライター", value=metrics["writer_state"], inline=False)
-        return embed
-
-    def _human_bytes(self, n: int) -> str:
-        s = float(n)
-        for unit in ["B", "KB", "MB", "GB"]:
-            if s < 1024.0:
-                return f"{s:.1f}{unit}"
-            s /= 1024.0
-        return f"{s:.1f}TB"
 
 
 def create_recording_handler(guild_id: int, mode: Mode) -> RecordingHandler:

@@ -10,7 +10,7 @@ from src.summarizer.prompt_provider.obsidian import (
 from src.summarizer.prompt_provider.structured_markdown import (
     StructuredMarkdownSummarizePromptProvider,
 )
-from src.transcriber.faster_whisper import FasterWhisperTranscriber
+from src.transcriber.openai import OpenAIWhisperTranscriber
 
 load_dotenv()
 
@@ -27,11 +27,16 @@ class Container(containers.DeclarativeContainer):
             PromptKey.OBSIDIAN: providers.Singleton(ObsidianSummarizePromptProvider),
         },
     )
+    # transcriber = providers.Singleton(
+    #     FasterWhisperTranscriber,
+    #     model_size=config.model_size,
+    #     beam_size=config.beam_size,
+    #     batch_size=config.batch_size,
+    # )
     transcriber = providers.Singleton(
-        FasterWhisperTranscriber,
-        model_size=config.model_size,
-        beam_size=config.beam_size,
-        batch_size=config.batch_size,
+        OpenAIWhisperTranscriber,
+        api_key=config.openai_api_key,
+        model="gpt-4o-mini-transcribe",
     )
     summarizer = providers.Singleton(
         OpenAISummarizer,

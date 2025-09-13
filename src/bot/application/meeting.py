@@ -1,5 +1,4 @@
 import asyncio
-import time
 from logging import getLogger
 
 import discord
@@ -44,12 +43,10 @@ class MeetingService:
                 f"Meeting already exists for guild {guild_id}"
             )
         vc = await voice_channel.connect()
-        meeting = Meeting(voice_client=vc)
+        sink = FileSink(loop=asyncio.get_running_loop())
+        meeting = Meeting(voice_client=vc, sink=sink)
         self.meetings[guild_id] = meeting
         logger.info(f"Starting recording in {voice_channel.name} for guild {guild_id}")
-        sink = FileSink(loop=asyncio.get_running_loop())
-        meeting.sink = sink
-        meeting.started_at = time.monotonic()
         vc.start_recording(
             sink,
             self.on_finish_recording,
@@ -107,30 +104,25 @@ class MeetingService:
             del self.meetings[guild_id]
 
     async def start_monitoring(
-        self, guild_id: int, channel: discord.TextChannel, interval: int = 20
+        self,
+        guild_id: int,
+        channel: discord.TextChannel,
     ):
         meeting = self.meetings.get(guild_id)
         if meeting is None:
             return
-        meeting.monitor_interval = max(10, min(60, interval))
-        embed = create_recording_monitor_embed(self.meetings.get(guild_id))
-        msg = await channel.send(embed=embed)
+        msg = await channel.send(
+            embed=discord.Embed(title="録音モニター", description="準備中...")
+        )
         meeting.monitor_message = msg
 
         async def _loop():
             while True:
-                await asyncio.sleep(meeting.monitor_interval)
-                m = self.meetings.get(guild_id)
-                if m is None:
-                    break
-                try:
+                await asyncio.sleep(10)
+                if (meeting := self.meetings.get(guild_id)) is not None:
                     await msg.edit(
-                        embed=create_recording_monitor_embed(
-                            self.meetings.get(guild_id)
-                        )
+                        embed=create_recording_monitor_embed(meeting.sink.metrics())
                     )
-                except Exception:
-                    break
 
         meeting.monitor_task = asyncio.create_task(_loop())
 
@@ -147,13 +139,14 @@ class MeetingService:
                 await task
             except asyncio.CancelledError:
                 pass
-        if final and message is not None:
-            try:
-                await message.edit(
-                    embed=create_recording_monitor_embed(self.meetings.get(guild_id))
-                )
-            except Exception:
-                pass
+        if (
+            final
+            and message is not None
+            and (meeting := self.meetings.get(guild_id)) is not None
+        ):
+            await message.edit(
+                embed=create_recording_monitor_embed(meeting.sink.metrics())
+            )
 
 
 def create_recording_handler(guild_id: int, mode: Mode) -> RecordingHandler:

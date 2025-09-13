@@ -1,10 +1,9 @@
-import time
-from typing import cast
+import datetime
 
 import discord
 
 from container import container
-from src.bot.domain.meeting import Meeting
+from src.bot.domain.metrics import RecordingMetrics
 
 
 def create_parameters_embed(guild_id: int) -> discord.Embed:
@@ -70,45 +69,31 @@ def create_parameters_embed(guild_id: int) -> discord.Embed:
 
 
 def create_recording_monitor_embed(
-    meeting: Meeting | None,
+    metrics: RecordingMetrics,
 ) -> discord.Embed:
     title = "🎙️ 録音モニター"
-    color = discord.Color.green()
-    if meeting is None:
-        embed = discord.Embed(title=title, color=discord.Color.red())
-        embed.add_field(name="状態", value="未開始")
-        return embed
-    sink = meeting.sink
-    if sink is None:
-        embed = discord.Embed(title=title, color=discord.Color.red())
-        embed.add_field(name="状態", value="未開始")
-        return embed
-    metrics = sink.metrics()
-    state = "録音中" if not metrics["closed"] else "停止"
-    if metrics["closed"]:
-        color = discord.Color.orange()
-    started = meeting.started_at or time.monotonic()
-    dur = max(0, int(time.monotonic() - started))
-    last = metrics["last_packet"]
-    since = "-" if last == 0 else f"{int(time.monotonic() - last)}s"
-    vc_name = "-"
-    voice_client = meeting.voice_client
-    if voice_client is not None and getattr(voice_client, "channel", None) is not None:
-        vc = cast(discord.VoiceChannel, voice_client.channel)
-        vc_name = getattr(vc, "name", "-")
-    b = metrics["bytes_total"]
-    human = _human_bytes(b)
-    embed = discord.Embed(title=title, color=color)
-    embed.add_field(name="状態", value=state)
-    embed.add_field(name="経過", value=f"{dur}s")
-    embed.add_field(name="VC", value=vc_name, inline=False)
-    embed.add_field(name="受信ユーザー", value=str(metrics["files"]))
-    embed.add_field(name="データ量", value=human)
-    embed.add_field(name="最終受信", value=since)
-    embed.add_field(
-        name="キュー", value=f"{metrics['queue_size']}/{metrics['queue_max']}"
+    queue_usage = metrics.queue_size / metrics.queue_max
+
+    color = (
+        discord.Color.red()
+        if queue_usage >= 0.9
+        else discord.Color.orange()
+        if queue_usage >= 0.75 or metrics.closed
+        else discord.Color.green()
     )
-    embed.add_field(name="ライター", value=metrics["writer_state"], inline=False)
+
+    updated_at = datetime.datetime.now(datetime.timezone.utc)
+
+    embed = discord.Embed(title=title, color=color)
+
+    embed.add_field(name="状態", value="録音中" if not metrics.closed else "停止")
+    embed.add_field(name="受信ユーザー", value=f"{metrics.files}人")
+    embed.add_field(name="データ量", value=_human_bytes(metrics.bytes_total))
+    embed.add_field(
+        name="キュー",
+        value=f"{metrics.queue_size}/{metrics.queue_max} ({queue_usage * 100:.0f}%)",
+    )
+    embed.timestamp = updated_at
     return embed
 
 

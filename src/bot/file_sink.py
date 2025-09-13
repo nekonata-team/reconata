@@ -10,6 +10,8 @@ from typing import IO
 import discord
 from discord.types.snowflake import Snowflake
 
+from .domain.metrics import RecordingMetrics
+
 _TMP_DIR = "tmp"
 
 logger = getLogger(__name__)
@@ -69,25 +71,16 @@ class FileSink(discord.sinks.Sink):
         except asyncio.QueueFull:
             logger.warning(f"Audio queue is full. Discarding data for user {user}.")
 
-    def metrics(self) -> dict:
+    def metrics(self) -> RecordingMetrics:
         qsize = self._queue.qsize()
-        return {
-            "files": len(self.audio_data),
-            "queue_size": qsize,
-            "queue_max": self._queue.maxsize,
-            "bytes_total": self._bytes_total,
-            "last_packet": self._last_packet,
-            "writer_state": (
-                "none"
-                if self._writer_task is None
-                else (
-                    "done"
-                    if self._writer_task.done()
-                    else ("cancelled" if self._writer_task.cancelled() else "running")
-                )
-            ),
-            "closed": self._is_closed,
-        }
+        return RecordingMetrics(
+            files=len(self.audio_data),
+            queue_size=qsize,
+            queue_max=self._queue.maxsize,
+            bytes_total=self._bytes_total,
+            last_packet=self._last_packet,
+            closed=self._is_closed,
+        )
 
     def _ensure_writer_task_started(self):
         """書き込みタスクの開始を保証する（スレッドセーフ）"""

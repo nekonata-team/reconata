@@ -1,9 +1,6 @@
 services:
   bot:
-    build:
-      context: .
-      args:
-        GITHUB_PAT: ${GITHUB_PAT}
+    build: .
     env_file:
       - .env
     volumes:

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import discord
 
-from src.transcriber.transcriber import Transcriber
+from src.transcriber.transcriber import IterableTranscriber, Transcriber
 
 from .attendee import Attendees
 from .common import create_path_builder, get_attendees_ids_string, mix, save_all_audio
@@ -24,7 +24,7 @@ from .recording_handler import (
 class TranscriptionRecordingHandler(RecordingHandler):
     def __init__(
         self,
-        transcriber: Transcriber,
+        transcriber: Transcriber | IterableTranscriber,
         dir: Path = Path("./data"),
     ):
         self.dir = dir

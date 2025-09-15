@@ -69,14 +69,14 @@ def _transcribe_iter(
             if current_time - last_yield_time >= 1.0:
                 embed = discord.Embed(description="文字起こしの一部が保存されました。")
                 embed.add_field(name="進捗", value=f"{segment.end:.2f} s")
-                embed.add_field(name="プレビュー", value=segment.text)
+                embed.add_field(name="プレビュー", value=segment.text[:1024])
                 yield EditMessageData(embed=embed)
                 last_yield_time = current_time
 
         if last_segment:
             embed = discord.Embed(description="文字起こしが完了しました。")
             embed.add_field(name="進捗", value=f"{last_segment.end:.2f} s")
-            embed.add_field(name="プレビュー", value=last_segment.text)
+            embed.add_field(name="プレビュー", value=last_segment.text[:1024])
             yield EditMessageData(embed=embed)
 
     return lines, message_iter()
